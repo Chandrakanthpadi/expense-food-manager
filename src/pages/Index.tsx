@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, BarChart3 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
@@ -9,9 +10,9 @@ import { HabitTracker } from "@/components/HabitTracker";
 import { TaskList } from "@/components/TaskList";
 import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
-import { SummaryStats } from "@/components/SummaryStats";
 
 const Index = () => {
+  const navigate = useNavigate();
   const life = useLifeData();
   const todayStr = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -32,14 +33,23 @@ const Index = () => {
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
             </p>
           </div>
-          <button
-            onClick={life.exportData}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
-            title="Export all data"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/insights")}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Insights
+            </button>
+            <button
+              onClick={life.exportData}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+              title="Export all data"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
         </header>
 
         {/* Calendar */}
@@ -49,12 +59,6 @@ const Index = () => {
           </CollapsibleSection>
         </div>
 
-        {/* Summary */}
-        <div className="section-reveal stagger-2">
-          <CollapsibleSection title="Summary" icon={<BarChart3 className="w-4 h-4" />} accentColor="bg-primary" defaultOpen>
-            <SummaryStats data={life.data} selectedDate={selectedDate} />
-          </CollapsibleSection>
-        </div>
 
         {/* Tasks */}
         <div className="section-reveal stagger-3">
