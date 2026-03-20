@@ -9,6 +9,7 @@ import { HabitTracker } from "@/components/HabitTracker";
 import { TaskList } from "@/components/TaskList";
 import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
+import { SummaryStats } from "@/components/SummaryStats";
 
 const Index = () => {
   const life = useLifeData();
