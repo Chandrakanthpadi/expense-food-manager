@@ -5,12 +5,13 @@ import type { Habit } from "@/hooks/useLifeData";
 
 interface Props {
   habits: Habit[];
+  selectedDate: string;
   onAdd: (name: string) => void;
   onToggle: (id: string, date: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function HabitTracker({ habits, onAdd, onToggle, onRemove }: Props) {
+export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }: Props) {
   const [name, setName] = useState("");
   const today = new Date().toISOString().slice(0, 10);
 
