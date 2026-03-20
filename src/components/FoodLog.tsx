@@ -6,21 +6,21 @@ const meals = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 interface Props {
   food: FoodEntry[];
-  onAdd: (meal: string, items: string, calories?: number) => void;
+  selectedDate: string;
+  onAdd: (meal: string, items: string, calories?: number, date?: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function FoodLog({ food, onAdd, onRemove }: Props) {
+export function FoodLog({ food, selectedDate, onAdd, onRemove }: Props) {
   const [meal, setMeal] = useState(meals[0]);
   const [items, setItems] = useState("");
   const [calories, setCalories] = useState("");
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayFood = food.filter(f => f.date === today);
+  const dayFood = food.filter(f => f.date === selectedDate);
 
   const handleAdd = () => {
     if (!items.trim()) return;
-    onAdd(meal, items.trim(), calories ? parseInt(calories) : undefined);
+    onAdd(meal, items.trim(), calories ? parseInt(calories) : undefined, selectedDate);
     setItems("");
     setCalories("");
   };
@@ -28,39 +28,26 @@ export function FoodLog({ food, onAdd, onRemove }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <select
-          value={meal}
-          onChange={e => setMeal(e.target.value)}
-          className="bg-muted rounded-md px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30"
-        >
+        <select value={meal} onChange={e => setMeal(e.target.value)}
+          className="bg-muted rounded-md px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30">
           {meals.map(m => <option key={m}>{m}</option>)}
         </select>
-        <input
-          type="text"
-          placeholder="What did you eat?"
-          value={items}
-          onChange={e => setItems(e.target.value)}
+        <input type="text" placeholder="What did you eat?" value={items} onChange={e => setItems(e.target.value)}
           className="flex-1 min-w-0 bg-muted rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30"
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-        />
+          onKeyDown={e => e.key === "Enter" && handleAdd()} />
       </div>
       <div className="flex gap-2">
-        <input
-          type="number"
-          placeholder="Calories (optional)"
-          value={calories}
-          onChange={e => setCalories(e.target.value)}
+        <input type="number" placeholder="Calories (optional)" value={calories} onChange={e => setCalories(e.target.value)}
           className="flex-1 bg-muted rounded-md px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/30"
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-        />
+          onKeyDown={e => e.key === "Enter" && handleAdd()} />
         <button onClick={handleAdd} className="bg-section-food text-primary-foreground rounded-md px-3 py-2 text-sm font-medium active:scale-95 transition-transform">
           <Plus className="w-4 h-4" />
         </button>
       </div>
 
-      {todayFood.length > 0 && (
+      {dayFood.length > 0 && (
         <ul className="space-y-1.5 pt-1">
-          {todayFood.map(f => (
+          {dayFood.map(f => (
             <li key={f.id} className="flex items-center gap-2 text-sm group">
               <span className="w-2 h-2 rounded-full bg-section-food/60 shrink-0" />
               <span className="text-xs text-muted-foreground w-16">{f.meal}</span>

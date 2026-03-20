@@ -1,25 +1,38 @@
-import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function MiniCalendar() {
-  const [current, setCurrent] = useState(new Date());
-  const today = new Date();
+interface Props {
+  selectedDate: string;
+  onSelectDate: (date: string) => void;
+}
 
-  const year = current.getFullYear();
-  const month = current.getMonth();
+export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
+  const selected = new Date(selectedDate + "T12:00:00");
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  const year = selected.getFullYear();
+  const month = selected.getMonth();
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const prev = () => setCurrent(new Date(year, month - 1, 1));
-  const next = () => setCurrent(new Date(year, month + 1, 1));
+  const prev = () => {
+    const d = new Date(year, month - 1, 1);
+    onSelectDate(d.toISOString().slice(0, 10));
+  };
+  const next = () => {
+    const d = new Date(year, month + 1, 1);
+    onSelectDate(d.toISOString().slice(0, 10));
+  };
 
-  const monthName = current.toLocaleDateString("en", { month: "long", year: "numeric" });
+  const monthName = new Date(year, month).toLocaleDateString("en", { month: "long", year: "numeric" });
   const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const isToday = (day: number) =>
-    day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+  const dateStr = (day: number) => {
+    const d = new Date(year, month, day);
+    return d.toISOString().slice(0, 10);
+  };
 
   return (
     <div className="space-y-2">
@@ -42,19 +55,33 @@ export function MiniCalendar() {
         ))}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1;
+          const ds = dateStr(day);
+          const isToday = ds === todayStr;
+          const isSelected = ds === selectedDate;
           return (
-            <span
+            <button
               key={day}
+              onClick={() => onSelectDate(ds)}
               className={cn(
-                "text-xs py-1 rounded-md tabular-nums",
-                isToday(day) && "bg-primary text-primary-foreground font-bold"
+                "text-xs py-1 rounded-md tabular-nums transition-all duration-100 active:scale-90 hover:bg-muted",
+                isSelected && "bg-primary text-primary-foreground font-bold hover:bg-primary/90",
+                isToday && !isSelected && "ring-1 ring-primary/40 font-semibold"
               )}
             >
               {day}
-            </span>
+            </button>
           );
         })}
       </div>
+
+      {selectedDate !== todayStr && (
+        <button
+          onClick={() => onSelectDate(todayStr)}
+          className="w-full text-xs text-primary hover:underline py-1"
+        >
+          ← Back to today
+        </button>
+      )}
     </div>
   );
 }

@@ -5,34 +5,31 @@ import type { Task } from "@/hooks/useLifeData";
 
 interface Props {
   tasks: Task[];
-  onAdd: (text: string) => void;
+  selectedDate: string;
+  onAdd: (text: string, date?: string) => void;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function TaskList({ tasks, onAdd, onToggle, onRemove }: Props) {
+export function TaskList({ tasks, selectedDate, onAdd, onToggle, onRemove }: Props) {
   const [text, setText] = useState("");
 
   const handleAdd = () => {
     if (!text.trim()) return;
-    onAdd(text.trim());
+    onAdd(text.trim(), selectedDate);
     setText("");
   };
 
-  const pending = tasks.filter(t => !t.done);
-  const done = tasks.filter(t => t.done);
+  const dayTasks = tasks.filter(t => t.date === selectedDate);
+  const pending = dayTasks.filter(t => !t.done);
+  const done = dayTasks.filter(t => t.done);
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Add a task..."
-          value={text}
-          onChange={e => setText(e.target.value)}
+        <input type="text" placeholder="Add a task..." value={text} onChange={e => setText(e.target.value)}
           className="flex-1 min-w-0 bg-muted rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30"
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-        />
+          onKeyDown={e => e.key === "Enter" && handleAdd()} />
         <button onClick={handleAdd} className="bg-section-tasks text-primary-foreground rounded-md px-3 py-2 text-sm font-medium active:scale-95 transition-transform">
           <Plus className="w-4 h-4" />
         </button>
