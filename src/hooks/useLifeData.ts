@@ -82,24 +82,24 @@ export function useLifeData() {
   const uid = () => crypto.randomUUID();
   const today = () => new Date().toISOString().slice(0, 10);
 
-  const addExpense = useCallback((amount: number, category: string, note: string) => {
-    setData(d => ({ ...d, expenses: [...d.expenses, { id: uid(), amount, category, note, date: today() }] }));
+  const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
+    setData(d => ({ ...d, expenses: [...d.expenses, { id: uid(), amount, category, note, date: date || today() }] }));
   }, []);
 
   const removeExpense = useCallback((id: string) => {
     setData(d => ({ ...d, expenses: d.expenses.filter(e => e.id !== id) }));
   }, []);
 
-  const addFood = useCallback((meal: string, items: string, calories?: number) => {
-    setData(d => ({ ...d, food: [...d.food, { id: uid(), meal, items, calories, date: today() }] }));
+  const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
+    setData(d => ({ ...d, food: [...d.food, { id: uid(), meal, items, calories, date: date || today() }] }));
   }, []);
 
   const removeFood = useCallback((id: string) => {
     setData(d => ({ ...d, food: d.food.filter(e => e.id !== id) }));
   }, []);
 
-  const addExercise = useCallback((activity: string, duration: number) => {
-    setData(d => ({ ...d, exercise: [...d.exercise, { id: uid(), activity, duration, date: today() }] }));
+  const addExercise = useCallback((activity: string, duration: number, date?: string) => {
+    setData(d => ({ ...d, exercise: [...d.exercise, { id: uid(), activity, duration, date: date || today() }] }));
   }, []);
 
   const removeExercise = useCallback((id: string) => {
@@ -125,8 +125,8 @@ export function useLifeData() {
     setData(d => ({ ...d, habits: d.habits.filter(h => h.id !== id) }));
   }, []);
 
-  const addTask = useCallback((text: string) => {
-    setData(d => ({ ...d, tasks: [...d.tasks, { id: uid(), text, done: false, date: today() }] }));
+  const addTask = useCallback((text: string, date?: string) => {
+    setData(d => ({ ...d, tasks: [...d.tasks, { id: uid(), text, done: false, date: date || today() }] }));
   }, []);
 
   const toggleTask = useCallback((id: string) => {
@@ -137,8 +137,8 @@ export function useLifeData() {
     setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) }));
   }, []);
 
-  const addJournal = useCallback((content: string, mood: string) => {
-    setData(d => ({ ...d, journal: [...d.journal, { id: uid(), content, mood, date: today() }] }));
+  const addJournal = useCallback((content: string, mood: string, date?: string) => {
+    setData(d => ({ ...d, journal: [...d.journal, { id: uid(), content, mood, date: date || today() }] }));
   }, []);
 
   const removeJournal = useCallback((id: string) => {
