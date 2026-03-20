@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download } from "lucide-react";
+import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, BarChart3 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { ExpenseTracker } from "@/components/ExpenseTracker";
