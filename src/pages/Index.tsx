@@ -34,14 +34,23 @@ const Index = () => {
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
             </p>
           </div>
-          <button
-            onClick={life.exportData}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
-            title="Export all data"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/insights")}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Insights
+            </button>
+            <button
+              onClick={life.exportData}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+              title="Export all data"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
         </header>
 
         {/* Calendar */}
