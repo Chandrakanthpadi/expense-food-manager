@@ -17,22 +17,20 @@ export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
   const prev = () => {
-    const d = new Date(year, month - 1, 1);
-    onSelectDate(d.toISOString().slice(0, 10));
+    onSelectDate(toDateStr(new Date(year, month - 1, 1)));
   };
   const next = () => {
-    const d = new Date(year, month + 1, 1);
-    onSelectDate(d.toISOString().slice(0, 10));
+    onSelectDate(toDateStr(new Date(year, month + 1, 1)));
   };
 
   const monthName = new Date(year, month).toLocaleDateString("en", { month: "long", year: "numeric" });
   const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const dateStr = (day: number) => {
-    const d = new Date(year, month, day);
-    return d.toISOString().slice(0, 10);
-  };
+  const dateStr = (day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
 
   return (
     <div className="space-y-2">
