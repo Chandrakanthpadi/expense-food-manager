@@ -92,7 +92,7 @@ const Index = () => {
         <div className="section-reveal stagger-6">
           <CollapsibleSection title="Habits" icon={<Target className="w-4 h-4" />} accentColor="bg-section-habits"
             count={life.data.habits.length}>
-            <HabitTracker habits={life.data.habits} onAdd={life.addHabit} onToggle={life.toggleHabit} onRemove={life.removeHabit} />
+            <HabitTracker habits={life.data.habits} selectedDate={selectedDate} onAdd={life.addHabit} onToggle={life.toggleHabit} onRemove={life.removeHabit} />
           </CollapsibleSection>
         </div>
 
