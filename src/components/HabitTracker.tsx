@@ -28,7 +28,13 @@ export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }
     return d.toISOString().slice(0, 10);
   });
 
-  const dayLabels = days.map(d => new Date(d + "T12:00:00").toLocaleDateString("en", { weekday: "narrow" }));
+  const dayLabels = days.map(d => {
+    const date = new Date(d + "T12:00:00");
+    return {
+      weekday: date.toLocaleDateString("en", { weekday: "narrow" }),
+      day: date.getDate(),
+    };
+  });
 
   return (
     <div className="space-y-3">
