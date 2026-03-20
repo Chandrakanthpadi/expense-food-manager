@@ -28,7 +28,13 @@ export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }
     return d.toISOString().slice(0, 10);
   });
 
-  const dayLabels = days.map(d => new Date(d + "T12:00:00").toLocaleDateString("en", { weekday: "narrow" }));
+  const dayLabels = days.map(d => {
+    const date = new Date(d + "T12:00:00");
+    return {
+      weekday: date.toLocaleDateString("en", { weekday: "narrow" }),
+      day: date.getDate(),
+    };
+  });
 
   return (
     <div className="space-y-3">
@@ -53,8 +59,10 @@ export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }
             <span className="flex-1" />
             <div className="flex gap-1">
               {dayLabels.map((label, i) => (
-                <span key={i} className={cn("w-7 text-center text-[10px] text-muted-foreground", days[i] === today && "font-bold text-foreground")}>
-                  {label}
+                <span key={i} className={cn("w-7 text-center text-[10px] leading-tight text-muted-foreground", days[i] === today && "font-bold text-foreground")}>
+                  {label.weekday}
+                  <br />
+                  <span className="text-[9px]">{label.day}</span>
                 </span>
               ))}
             </div>
