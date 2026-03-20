@@ -60,6 +60,10 @@ const Index = () => {
           </CollapsibleSection>
         </div>
 
+        {/* Monthly Summary */}
+        <div className="section-reveal stagger-2">
+          <SummaryStats data={life.data} selectedDate={selectedDate} />
+        </div>
 
         {/* Tasks */}
         <div className="section-reveal stagger-3">
