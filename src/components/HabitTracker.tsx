@@ -5,12 +5,13 @@ import type { Habit } from "@/hooks/useLifeData";
 
 interface Props {
   habits: Habit[];
+  selectedDate: string;
   onAdd: (name: string) => void;
   onToggle: (id: string, date: string) => void;
   onRemove: (id: string) => void;
 }
 
-export function HabitTracker({ habits, onAdd, onToggle, onRemove }: Props) {
+export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }: Props) {
   const [name, setName] = useState("");
   const today = new Date().toISOString().slice(0, 10);
 
@@ -22,7 +23,7 @@ export function HabitTracker({ habits, onAdd, onToggle, onRemove }: Props) {
 
   // Last 7 days
   const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
+    const d = new Date(selectedDate + "T12:00:00");
     d.setDate(d.getDate() - (6 - i));
     return d.toISOString().slice(0, 10);
   });
