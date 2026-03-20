@@ -30,10 +30,7 @@ export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
   const monthName = new Date(year, month).toLocaleDateString("en", { month: "long", year: "numeric" });
   const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
 
-  const dateStr = (day: number) => {
-    const d = new Date(year, month, day);
-    return d.toISOString().slice(0, 10);
-  };
+  const dateStr = (day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
 
   return (
     <div className="space-y-2">
