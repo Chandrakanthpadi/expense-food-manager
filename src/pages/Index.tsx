@@ -49,8 +49,15 @@ const Index = () => {
           </CollapsibleSection>
         </div>
 
-        {/* Tasks */}
+        {/* Summary */}
         <div className="section-reveal stagger-2">
+          <CollapsibleSection title="Summary" icon={<BarChart3 className="w-4 h-4" />} accentColor="bg-primary" defaultOpen>
+            <SummaryStats data={life.data} selectedDate={selectedDate} />
+          </CollapsibleSection>
+        </div>
+
+        {/* Tasks */}
+        <div className="section-reveal stagger-3">
           <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks" defaultOpen
             count={life.data.tasks.filter(t => t.date === selectedDate && !t.done).length}>
             <TaskList tasks={life.data.tasks} selectedDate={selectedDate} onAdd={life.addTask} onToggle={life.toggleTask} onRemove={life.removeTask} />
