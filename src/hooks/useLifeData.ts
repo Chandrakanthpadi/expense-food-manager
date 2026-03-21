@@ -54,6 +54,7 @@ export interface JournalEntry {
 export interface LifeData {
   expenses: Expense[];
   food: FoodEntry[];
+  mealChecks: MealCheck[];
   exercise: ExerciseEntry[];
   habits: Habit[];
   tasks: Task[];
