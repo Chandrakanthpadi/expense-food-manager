@@ -234,20 +234,48 @@ const Insights = () => {
           </div>
         </header>
 
-        {/* Period toggle */}
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5 w-fit">
-          {(["week", "month", "year"] as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={cn(
-                "px-4 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
-                period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
+        {/* Period toggle + navigation */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+            {(["week", "month", "year"] as Period[]).map(p => (
+              <button
+                key={p}
+                onClick={() => { setPeriod(p); setOffset(0); }}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
+                  period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date navigation */}
+        <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
+          <button
+            onClick={() => setOffset(o => o - 1)}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setOffset(0)}
+            className={cn(
+              "text-sm font-medium px-3 py-0.5 rounded-md transition-all",
+              isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95"
+            )}
+          >
+            {periodLabel(period, offset)}
+          </button>
+          <button
+            onClick={() => setOffset(o => o + 1)}
+            disabled={isCurrentPeriod}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
         {/* ── Expenses ── */}
