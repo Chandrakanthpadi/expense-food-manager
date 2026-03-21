@@ -114,8 +114,10 @@ const Insights = () => {
   const navigate = useNavigate();
   const { data } = useLifeData();
   const [period, setPeriod] = useState<Period>("month");
-  const [start, end] = getDateRange(period);
+  const [offset, setOffset] = useState(0);
+  const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
+  const isCurrentPeriod = offset === 0;
 
   const insights = useMemo(() => {
     // ── Expenses ──
