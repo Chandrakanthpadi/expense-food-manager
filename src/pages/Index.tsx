@@ -1,14 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, BarChart3 } from "lucide-react";
+import { DollarSign, UtensilsCrossed, Dumbbell, Calendar, Download } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { ExpenseTracker } from "@/components/ExpenseTracker";
 import { FoodLog } from "@/components/FoodLog";
 import { ExerciseLog } from "@/components/ExerciseLog";
-import { HabitTracker } from "@/components/HabitTracker";
-import { TaskList } from "@/components/TaskList";
-import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { SummaryStats } from "@/components/SummaryStats";
 
