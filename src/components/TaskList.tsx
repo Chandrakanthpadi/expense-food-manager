@@ -37,23 +37,23 @@ export function TaskList({ tasks, selectedDate, onAdd, onToggle, onRemove }: Pro
 
       <ul className="space-y-1">
         {pending.map(t => (
-          <li key={t.id} className="flex items-center gap-2 text-sm group">
+          <li key={t.id} className="flex items-center gap-2 text-sm">
             <button onClick={() => onToggle(t.id)} className="text-muted-foreground hover:text-section-tasks transition-colors active:scale-90">
               <Circle className="w-4.5 h-4.5" />
             </button>
             <span className="flex-1">{t.text}</span>
-            <button onClick={() => onRemove(t.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+            <button onClick={() => onRemove(t.id)} className="text-muted-foreground hover:text-destructive transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           </li>
         ))}
         {done.map(t => (
-          <li key={t.id} className="flex items-center gap-2 text-sm group opacity-50">
+          <li key={t.id} className="flex items-center gap-2 text-sm opacity-50">
             <button onClick={() => onToggle(t.id)} className="text-section-tasks active:scale-90">
               <CheckCircle2 className="w-4.5 h-4.5" />
             </button>
             <span className={cn("flex-1 line-through")}>{t.text}</span>
-            <button onClick={() => onRemove(t.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+            <button onClick={() => onRemove(t.id)} className="text-muted-foreground hover:text-destructive transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           </li>

@@ -45,11 +45,11 @@ export function ExerciseLog({ exercise, selectedDate, onAdd, onRemove }: Props) 
       {dayExercise.length > 0 && (
         <ul className="space-y-1.5 pt-1">
           {dayExercise.map(e => (
-            <li key={e.id} className="flex items-center gap-2 text-sm group">
+            <li key={e.id} className="flex items-center gap-2 text-sm">
               <span className="w-2 h-2 rounded-full bg-section-exercise/60 shrink-0" />
               <span className="flex-1">{e.activity}</span>
               <span className="tabular-nums text-muted-foreground">{e.duration} min</span>
-              <button onClick={() => onRemove(e.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+              <button onClick={() => onRemove(e.id)} className="text-muted-foreground hover:text-destructive transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </li>
