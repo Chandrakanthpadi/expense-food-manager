@@ -231,7 +231,6 @@ const Insights = () => {
           </button>
           <div className="flex-1">
             <h1 className="text-xl font-bold tracking-tight leading-none">Insights</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{periodLabel(period)}</p>
           </div>
         </header>
 
