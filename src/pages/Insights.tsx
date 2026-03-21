@@ -204,7 +204,7 @@ const Insights = () => {
 
     return {
       expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length },
-      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown },
+      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, totalDaysWithChecks, daysInPeriod: daysInRange.length },
       exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown },
       habits: { habitStats, totalHabitDays },
       tasks: { tasksDone, tasksTotal, completionRate, mostProductiveDay },
