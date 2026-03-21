@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, DollarSign, UtensilsCrossed, Dumbbell, Target,
+  ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
@@ -12,34 +12,42 @@ type Period = "week" | "month" | "year";
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function fmtLocal(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-function getDateRange(period: Period): [string, string] {
+function getDateRange(period: Period, offset: number): [string, string] {
   const now = new Date();
   if (period === "week") {
     const day = now.getDay();
-    const start = new Date(now); start.setDate(now.getDate() - day);
-    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const start = new Date(now);
+    start.setDate(now.getDate() - day + offset * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
     return [fmtLocal(start), fmtLocal(end)];
   }
   if (period === "month") {
-    return [fmtLocal(new Date(now.getFullYear(), now.getMonth(), 1)), fmtLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+    const m = now.getMonth() + offset;
+    const start = new Date(now.getFullYear(), m, 1);
+    const end = new Date(now.getFullYear(), m + 1, 0);
+    return [fmtLocal(start), fmtLocal(end)];
   }
-  return [fmtLocal(new Date(now.getFullYear(), 0, 1)), fmtLocal(new Date(now.getFullYear(), 11, 31))];
+  const y = now.getFullYear() + offset;
+  return [fmtLocal(new Date(y, 0, 1)), fmtLocal(new Date(y, 11, 31))];
 }
 
-function inRange(date: string, start: string, end: string) {
-  return date >= start && date <= end;
-}
-
-function periodLabel(period: Period): string {
-  const now = new Date();
+function periodLabel(period: Period, offset: number): string {
+  const [s, e] = getDateRange(period, offset);
   if (period === "week") {
-    const [s, e] = getDateRange("week");
     const sf = new Date(s + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
     const ef = new Date(e + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
     return `${sf} – ${ef}`;
   }
-  if (period === "month") return now.toLocaleDateString("en", { month: "long", year: "numeric" });
-  return now.getFullYear().toString();
+  if (period === "month") {
+    const d = new Date(s + "T12:00:00");
+    return d.toLocaleDateString("en", { month: "long", year: "numeric" });
+  }
+  return new Date(s + "T12:00:00").getFullYear().toString();
+}
+
+function inRange(date: string, start: string, end: string) {
+  return date >= start && date <= end;
 }
 
 // Daily breakdown helper
@@ -110,8 +118,10 @@ const Insights = () => {
   const navigate = useNavigate();
   const { data } = useLifeData();
   const [period, setPeriod] = useState<Period>("month");
-  const [start, end] = getDateRange(period);
+  const [offset, setOffset] = useState(0);
+  const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
+  const isCurrentPeriod = offset === 0;
 
   const insights = useMemo(() => {
     // ── Expenses ──
@@ -225,24 +235,51 @@ const Insights = () => {
           </button>
           <div className="flex-1">
             <h1 className="text-xl font-bold tracking-tight leading-none">Insights</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{periodLabel(period)}</p>
           </div>
         </header>
 
-        {/* Period toggle */}
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5 w-fit">
-          {(["week", "month", "year"] as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={cn(
-                "px-4 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
-                period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
+        {/* Period toggle + navigation */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+            {(["week", "month", "year"] as Period[]).map(p => (
+              <button
+                key={p}
+                onClick={() => { setPeriod(p); setOffset(0); }}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
+                  period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date navigation */}
+        <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
+          <button
+            onClick={() => setOffset(o => o - 1)}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setOffset(0)}
+            className={cn(
+              "text-sm font-medium px-3 py-0.5 rounded-md transition-all",
+              isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95"
+            )}
+          >
+            {periodLabel(period, offset)}
+          </button>
+          <button
+            onClick={() => setOffset(o => o + 1)}
+            disabled={isCurrentPeriod}
+            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
 
         {/* ── Expenses ── */}
