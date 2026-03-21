@@ -29,10 +29,21 @@ export function CollapsibleSection({ title, icon, accentColor, children, count, 
           <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 tabular-nums">{count}</span>
         )}
         {collapsible && (
-          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", open && "rotate-180")} />
         )}
       </div>
-      {(!collapsible || open) && <div className="px-4 pb-4 pt-1">{children}</div>}
+      {collapsible ? (
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+          style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+        >
+          <div className="overflow-hidden">
+            <div className="px-4 pb-4 pt-1">{children}</div>
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 pb-4 pt-1">{children}</div>
+      )}
     </div>
   );
 }

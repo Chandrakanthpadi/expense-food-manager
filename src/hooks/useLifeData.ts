@@ -173,6 +173,11 @@ export function useLifeData() {
     setData(d => ({ ...d, journal: d.journal.filter(j => j.id !== id) }));
   }, []);
 
+  const resetData = useCallback(() => {
+    setData(defaultData);
+    localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
   const exportData = useCallback(() => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -192,5 +197,6 @@ export function useLifeData() {
     addTask, toggleTask, removeTask,
     addJournal, removeJournal,
     exportData,
+    resetData,
   };
 }
