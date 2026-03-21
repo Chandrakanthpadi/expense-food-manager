@@ -53,9 +53,9 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Calendar */}
+        {/* Calendar - collapsible */}
         <div className="section-reveal stagger-1">
-          <CollapsibleSection title="Calendar" icon={<Calendar className="w-4 h-4" />} accentColor="bg-primary" defaultOpen>
+          <CollapsibleSection title="Calendar" icon={<Calendar className="w-4 h-4" />} accentColor="bg-primary" collapsible defaultOpen>
             <MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           </CollapsibleSection>
         </div>
@@ -67,7 +67,7 @@ const Index = () => {
 
         {/* Tasks */}
         <div className="section-reveal stagger-3">
-          <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks" defaultOpen
+          <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks"
             count={life.data.tasks.filter(t => t.date === selectedDate && !t.done).length}>
             <TaskList tasks={life.data.tasks} selectedDate={selectedDate} onAdd={life.addTask} onToggle={life.toggleTask} onRemove={life.removeTask} />
           </CollapsibleSection>

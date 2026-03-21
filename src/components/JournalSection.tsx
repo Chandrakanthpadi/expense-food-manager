@@ -45,10 +45,10 @@ export function JournalSection({ journal, selectedDate, onAdd, onRemove }: Props
       {dayEntries.length > 0 && (
         <ul className="space-y-2 pt-1">
           {dayEntries.map(j => (
-            <li key={j.id} className="flex gap-2 text-sm group">
+            <li key={j.id} className="flex gap-2 text-sm">
               <span className="text-base leading-5">{j.mood}</span>
               <p className="flex-1 text-muted-foreground leading-relaxed">{j.content}</p>
-              <button onClick={() => onRemove(j.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive self-start">
+              <button onClick={() => onRemove(j.id)} className="text-muted-foreground hover:text-destructive transition-colors self-start">
                 <X className="w-3.5 h-3.5" />
               </button>
             </li>

@@ -70,7 +70,7 @@ export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }
           </div>
 
           {habits.map(h => (
-            <div key={h.id} className="flex items-center gap-1 group">
+            <div key={h.id} className="flex items-center gap-1">
               <span className="flex-1 text-sm truncate">{h.name}</span>
               <div className="flex gap-1">
                 {days.map(d => {
@@ -89,7 +89,7 @@ export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }
                   );
                 })}
               </div>
-              <button onClick={() => onRemove(h.id)} className="w-6 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+              <button onClick={() => onRemove(h.id)} className="w-6 flex justify-center text-muted-foreground hover:text-destructive transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
