@@ -25,7 +25,12 @@ export function FoodLog({ food, mealChecks, selectedDate, onAdd, onRemove, onTog
 
   const handleAdd = () => {
     if (!items.trim()) return;
+    const mealKey = meal.toLowerCase() as "breakfast" | "lunch" | "dinner" | "snack";
     onAdd(meal, items.trim(), calories ? parseInt(calories) : undefined, selectedDate);
+    // Auto-check the meal if not already checked
+    if (!(dayCheck?.[mealKey])) {
+      onToggleMeal(selectedDate, mealKey);
+    }
     setItems("");
     setCalories("");
   };
