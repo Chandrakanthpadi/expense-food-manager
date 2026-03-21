@@ -108,6 +108,24 @@ export function useLifeData() {
     setData(d => ({ ...d, food: d.food.filter(e => e.id !== id) }));
   }, []);
 
+  const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
+    setData(d => {
+      const existing = d.mealChecks.find(m => m.date === date);
+      if (existing) {
+        return {
+          ...d,
+          mealChecks: d.mealChecks.map(m =>
+            m.date === date ? { ...m, [meal]: !m[meal] } : m
+          ),
+        };
+      }
+      return {
+        ...d,
+        mealChecks: [...d.mealChecks, { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true }],
+      };
+    });
+  }, []);
+
   const addExercise = useCallback((activity: string, duration: number, date?: string) => {
     setData(d => ({ ...d, exercise: [...d.exercise, { id: uid(), activity, duration, date: date || today() }] }));
   }, []);
