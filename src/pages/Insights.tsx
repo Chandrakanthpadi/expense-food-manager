@@ -46,6 +46,10 @@ function periodLabel(period: Period, offset: number): string {
   return new Date(s + "T12:00:00").getFullYear().toString();
 }
 
+function inRange(date: string, start: string, end: string) {
+  return date >= start && date <= end;
+}
+
 // Daily breakdown helper
 function getDaysInRange(start: string, end: string): string[] {
   const days: string[] = [];
