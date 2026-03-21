@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, DollarSign, UtensilsCrossed, Dumbbell, Target,
+  ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
