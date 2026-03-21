@@ -16,6 +16,14 @@ export interface FoodEntry {
   date: string;
 }
 
+export interface MealCheck {
+  date: string;
+  breakfast: boolean;
+  lunch: boolean;
+  dinner: boolean;
+  snack: boolean;
+}
+
 export interface ExerciseEntry {
   id: string;
   activity: string;
