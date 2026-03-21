@@ -66,6 +66,7 @@ const STORAGE_KEY = "lifeflow-data";
 const defaultData: LifeData = {
   expenses: [],
   food: [],
+  mealChecks: [],
   exercise: [],
   habits: [],
   tasks: [],
