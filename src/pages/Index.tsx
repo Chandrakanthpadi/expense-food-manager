@@ -94,23 +94,15 @@ const Index = () => {
 
         {/* Calendar - collapsible */}
         <div className="section-reveal stagger-1">
-          <CollapsibleSection title="Calendar" icon={<Calendar className="w-4 h-4" />} accentColor="bg-primary" collapsible defaultOpen>
+          <CollapsibleSection title="Calendar" icon={<Calendar className="w-4 h-4" />} accentColor="bg-primary" collapsible defaultOpen ={false}>
             <MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           </CollapsibleSection>
         </div>
 
         {/* Monthly Summary */}
-        <div className="section-reveal stagger-2">
+        {/* <div className="section-reveal stagger-2">
           <SummaryStats data={life.data} selectedDate={selectedDate} />
-        </div>
-
-        {/* Tasks */}
-        <div className="section-reveal stagger-3">
-          <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks"
-            count={life.data.tasks.filter(t => t.date === selectedDate && !t.done).length}>
-            <TaskList tasks={life.data.tasks} selectedDate={selectedDate} onAdd={life.addTask} onToggle={life.toggleTask} onRemove={life.removeTask} />
-          </CollapsibleSection>
-        </div>
+        </div> */}
 
         {/* Expenses */}
         <div className="section-reveal stagger-3">
@@ -133,6 +125,14 @@ const Index = () => {
           <CollapsibleSection title="Exercise" icon={<Dumbbell className="w-4 h-4" />} accentColor="bg-section-exercise"
             count={life.data.exercise.filter(e => e.date === selectedDate).length}>
             <ExerciseLog exercise={life.data.exercise} selectedDate={selectedDate} onAdd={life.addExercise} onRemove={life.removeExercise} />
+          </CollapsibleSection>
+        </div>
+
+        {/* Tasks */}
+        <div className="section-reveal stagger-3">
+          <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks"
+            count={life.data.tasks.filter(t => t.date === selectedDate && !t.done).length}>
+            <TaskList tasks={life.data.tasks} selectedDate={selectedDate} onAdd={life.addTask} onToggle={life.toggleTask} onRemove={life.removeTask} />
           </CollapsibleSection>
         </div>
 

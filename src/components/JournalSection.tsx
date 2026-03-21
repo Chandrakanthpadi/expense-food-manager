@@ -37,10 +37,10 @@ export function JournalSection({ journal, selectedDate, onAdd, onRemove }: Props
       <div className="flex gap-2">
         <textarea placeholder="How's your day going?" value={content} onChange={e => setContent(e.target.value)} rows={2}
           className="flex-1 bg-muted rounded-md px-3 py-2 text-sm outline-none resize-none focus:ring-2 focus:ring-ring/30" />
-        <button onClick={handleAdd} className="self-end bg-section-journal text-primary-foreground rounded-md px-3 py-2 text-sm font-medium active:scale-95 transition-transform">
-          <Plus className="w-4 h-4" />
-        </button>
       </div>
+      <button onClick={handleAdd} className="w-full justify-center bg-section-journal text-primary-foreground rounded-md px-3 py-2 text-sm font-medium active:scale-95 transition-transform flex">
+        <Plus className="w-4 h-4" />
+      </button>
 
       {dayEntries.length > 0 && (
         <ul className="space-y-2 pt-1">

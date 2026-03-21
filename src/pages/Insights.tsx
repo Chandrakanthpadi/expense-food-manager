@@ -84,6 +84,7 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
       wEnd.setDate(wEnd.getDate() + 1);
       d.setTime(wEnd.getTime());
     }
+    weeks.push({ label: `Total`, start: start, end: end });
     return weeks;
   }
   if (period === "year") {
@@ -99,6 +100,7 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
         end: fmtLocal(mEnd),
       });
     }
+    months.push({ label: `Total`, start: start, end: end });
     return months;
   }
   return [];
@@ -149,7 +151,7 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
               style={{ width: `${max > 0 ? (v.amount / max) * 100 : 0}%` }}
             />
           </div>
-          <span className="text-[11px] tabular-nums font-medium w-12 text-right">${v.amount.toFixed(0)}</span>
+          <span className="text-[11px] tabular-nums font-medium w-12 text-right">₹{v.amount.toFixed(0)}</span>
         </div>
       ))}
     </div>
@@ -192,10 +194,7 @@ function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
                 <td className="px-4 py-2 font-medium">{r.label}</td>
                 <td className="text-right px-3 py-2 tabular-nums">
                   <div className="flex items-center justify-end gap-1.5">
-                    <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className={cn("h-full rounded-full", colorClass)} style={{ width: `${(r.spent / maxSpent) * 100}%` }} />
-                    </div>
-                    <span>${r.spent.toFixed(0)}</span>
+                    <span>₹{r.spent.toFixed(0)}</span>
                   </div>
                 </td>
                 <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
@@ -421,13 +420,13 @@ const Insights = () => {
 
           {/* ── Expenses ── */}
           <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
-            <MetricRow label="Total spent" value={`$${insights.expenses.totalSpent.toFixed(2)}`} />
-            <MetricRow label="Daily average" value={`$${insights.expenses.avgPerDay.toFixed(2)}`} />
+            <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
+            <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
             <MetricRow label="Transactions" value={String(insights.expenses.count)} />
             {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
               <MetricRow
                 label="Biggest day"
-                value={`$${insights.expenses.highestDay.amount.toFixed(2)}`}
+                value={`₹${insights.expenses.highestDay.amount.toFixed(2)}`}
                 sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
               />
             )}

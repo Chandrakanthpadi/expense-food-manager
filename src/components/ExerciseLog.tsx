@@ -27,7 +27,7 @@ export function ExerciseLog({ exercise, selectedDate, onAdd, onRemove }: Props) 
     <div className="space-y-3">
       <div className="flex items-baseline justify-between">
         <span className="text-xs text-muted-foreground">Activity</span>
-        <span className="text-lg font-semibold tabular-nums">{totalMin} min</span>
+        <span className="text-lg font-semibold tabular-nums">{(totalMin/60.00).toFixed(2)} hr </span>
       </div>
 
       <div className="flex gap-2">
@@ -43,7 +43,7 @@ export function ExerciseLog({ exercise, selectedDate, onAdd, onRemove }: Props) 
       </div>
 
       {dayExercise.length > 0 && (
-        <ul className="space-y-1.5 pt-1">
+        <ul className="space-y-2 pt-1">
           {dayExercise.map(e => (
             <li key={e.id} className="flex items-center gap-2 text-sm">
               <span className="w-2 h-2 rounded-full bg-section-exercise/60 shrink-0" />

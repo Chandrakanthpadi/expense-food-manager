@@ -84,7 +84,7 @@ export function FoodLog({ food, mealChecks, selectedDate, onAdd, onRemove, onTog
       </div>
 
       {dayFood.length > 0 && (
-        <ul className="space-y-1.5 pt-1">
+        <ul className="space-y-2 pt-1">
           {dayFood.map(f => (
             <li key={f.id} className="flex items-center gap-2 text-sm group">
               <span className="w-2 h-2 rounded-full bg-section-food/60 shrink-0" />
