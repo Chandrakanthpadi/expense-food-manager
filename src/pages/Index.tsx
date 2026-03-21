@@ -9,7 +9,6 @@ import { MiniCalendar } from "@/components/MiniCalendar";
 import { SummaryStats } from "@/components/SummaryStats";
 
 const Index = () => {
-  const navigate = useNavigate();
   const life = useLifeData();
   const todayStr = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(todayStr);
