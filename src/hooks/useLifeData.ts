@@ -16,6 +16,14 @@ export interface FoodEntry {
   date: string;
 }
 
+export interface MealCheck {
+  date: string;
+  breakfast: boolean;
+  lunch: boolean;
+  dinner: boolean;
+  snack: boolean;
+}
+
 export interface ExerciseEntry {
   id: string;
   activity: string;
@@ -46,6 +54,7 @@ export interface JournalEntry {
 export interface LifeData {
   expenses: Expense[];
   food: FoodEntry[];
+  mealChecks: MealCheck[];
   exercise: ExerciseEntry[];
   habits: Habit[];
   tasks: Task[];
@@ -57,6 +66,7 @@ const STORAGE_KEY = "lifeflow-data";
 const defaultData: LifeData = {
   expenses: [],
   food: [],
+  mealChecks: [],
   exercise: [],
   habits: [],
   tasks: [],
@@ -96,6 +106,24 @@ export function useLifeData() {
 
   const removeFood = useCallback((id: string) => {
     setData(d => ({ ...d, food: d.food.filter(e => e.id !== id) }));
+  }, []);
+
+  const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
+    setData(d => {
+      const existing = d.mealChecks.find(m => m.date === date);
+      if (existing) {
+        return {
+          ...d,
+          mealChecks: d.mealChecks.map(m =>
+            m.date === date ? { ...m, [meal]: !m[meal] } : m
+          ),
+        };
+      }
+      return {
+        ...d,
+        mealChecks: [...d.mealChecks, { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true }],
+      };
+    });
   }, []);
 
   const addExercise = useCallback((activity: string, duration: number, date?: string) => {
@@ -158,7 +186,7 @@ export function useLifeData() {
   return {
     data,
     addExpense, removeExpense,
-    addFood, removeFood,
+    addFood, removeFood, toggleMealCheck,
     addExercise, removeExercise,
     addHabit, toggleHabit, removeHabit,
     addTask, toggleTask, removeTask,

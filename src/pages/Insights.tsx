@@ -144,6 +144,15 @@ const Insights = () => {
       }, {})
     ).sort((a, b) => b[1] - a[1]);
 
+    // Meal completion tracking
+    const mealChecks = data.mealChecks.filter(m => inRange(m.date, start, end));
+    const totalDaysWithChecks = mealChecks.length;
+    const breakfastCount = mealChecks.filter(m => m.breakfast).length;
+    const lunchCount = mealChecks.filter(m => m.lunch).length;
+    const dinnerCount = mealChecks.filter(m => m.dinner).length;
+    const snackCount = mealChecks.filter(m => m.snack).length;
+    const allThreeMeals = mealChecks.filter(m => m.breakfast && m.lunch && m.dinner).length;
+
     // ── Exercise ──
     const exercise = data.exercise.filter(e => inRange(e.date, start, end));
     const totalMinutes = exercise.reduce((s, e) => s + e.duration, 0);
@@ -195,7 +204,7 @@ const Insights = () => {
 
     return {
       expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length },
-      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown },
+      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, totalDaysWithChecks, daysInPeriod: daysInRange.length },
       exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown },
       habits: { habitStats, totalHabitDays },
       tasks: { tasksDone, tasksTotal, completionRate, mostProductiveDay },
@@ -265,9 +274,39 @@ const Insights = () => {
           <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
           <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
           <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
+
+          {/* Meal completion stats */}
+          <div className="mt-3 space-y-1.5">
+            <p className="text-[11px] text-muted-foreground font-medium mb-1">Meal consistency</p>
+            {[
+              { label: "Breakfast", count: insights.food.breakfastCount },
+              { label: "Lunch", count: insights.food.lunchCount },
+              { label: "Dinner", count: insights.food.dinnerCount },
+              { label: "Snack", count: insights.food.snackCount },
+            ].map(m => {
+              const rate = insights.food.daysInPeriod > 0 ? (m.count / insights.food.daysInPeriod) * 100 : 0;
+              return (
+                <div key={m.label} className="space-y-0.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{m.label}</span>
+                    <span className="tabular-nums font-medium">{m.count}/{insights.food.daysInPeriod} <span className="text-muted-foreground">({Math.round(rate)}%)</span></span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-section-food rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            {insights.food.allThreeMeals > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-2">
+                ✅ All 3 main meals on <span className="font-semibold text-foreground">{insights.food.allThreeMeals}</span> day{insights.food.allThreeMeals !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+
           {insights.food.mealBreakdown.length > 0 && (
             <div className="mt-3 space-y-1">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">Meals breakdown</p>
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Food entries by meal</p>
               {insights.food.mealBreakdown.map(([meal, count]) => (
                 <div key={meal} className="flex justify-between text-xs">
                   <span className="text-muted-foreground capitalize">{meal}</span>

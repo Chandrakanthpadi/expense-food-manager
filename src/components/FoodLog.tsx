@@ -1,22 +1,27 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import type { FoodEntry } from "@/hooks/useLifeData";
+import { Plus, X, Check } from "lucide-react";
+import type { FoodEntry, MealCheck } from "@/hooks/useLifeData";
 
 const meals = ["Breakfast", "Lunch", "Dinner", "Snack"];
+const coreMeals = ["breakfast", "lunch", "dinner"] as const;
+const allMealKeys = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 interface Props {
   food: FoodEntry[];
+  mealChecks: MealCheck[];
   selectedDate: string;
   onAdd: (meal: string, items: string, calories?: number, date?: string) => void;
   onRemove: (id: string) => void;
+  onToggleMeal: (date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => void;
 }
 
-export function FoodLog({ food, selectedDate, onAdd, onRemove }: Props) {
+export function FoodLog({ food, mealChecks, selectedDate, onAdd, onRemove, onToggleMeal }: Props) {
   const [meal, setMeal] = useState(meals[0]);
   const [items, setItems] = useState("");
   const [calories, setCalories] = useState("");
 
   const dayFood = food.filter(f => f.date === selectedDate);
+  const dayCheck = mealChecks.find(m => m.date === selectedDate);
 
   const handleAdd = () => {
     if (!items.trim()) return;
@@ -27,6 +32,34 @@ export function FoodLog({ food, selectedDate, onAdd, onRemove }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* Meal check row */}
+      <div className="flex gap-2">
+        {allMealKeys.map(m => {
+          const checked = dayCheck?.[m] ?? false;
+          const isCore = (coreMeals as readonly string[]).includes(m);
+          return (
+            <button
+              key={m}
+              onClick={() => onToggleMeal(selectedDate, m)}
+              className={`flex-1 flex flex-col items-center gap-1 rounded-lg py-2 text-xs font-medium transition-all active:scale-95 border ${
+                checked
+                  ? "bg-section-food/15 border-section-food/40 text-foreground"
+                  : "bg-muted/50 border-border/40 text-muted-foreground"
+              }`}
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                checked ? "bg-section-food text-primary-foreground" : "bg-muted"
+              }`}>
+                {checked && <Check className="w-3 h-3" />}
+              </span>
+              <span className="capitalize">{m}</span>
+              {!isCore && <span className="text-[9px] text-muted-foreground -mt-0.5">optional</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Food entry form */}
       <div className="flex gap-2">
         <select value={meal} onChange={e => setMeal(e.target.value)}
           className="bg-muted rounded-md px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30">
