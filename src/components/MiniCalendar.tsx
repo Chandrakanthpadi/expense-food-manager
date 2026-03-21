@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getISTDateStr } from "@/lib/utils";
 
 interface Props {
   selectedDate: string;
@@ -8,8 +8,7 @@ interface Props {
 
 export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
   const selected = new Date(selectedDate + "T12:00:00");
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = getISTDateStr();
 
   const year = selected.getFullYear();
   const month = selected.getMonth();

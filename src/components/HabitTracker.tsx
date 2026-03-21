@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, X, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getISTDateStr } from "@/lib/utils";
 import type { Habit } from "@/hooks/useLifeData";
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 export function HabitTracker({ habits, selectedDate, onAdd, onToggle, onRemove }: Props) {
   const [name, setName] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getISTDateStr();
 
   const handleAdd = () => {
     if (!name.trim()) return;

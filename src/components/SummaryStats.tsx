@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen } from "lucide-react";
 import type { LifeData } from "@/hooks/useLifeData";
+import { getISTDateStr } from "@/lib/utils";
 
 type Period = "week" | "month" | "year";
 
@@ -33,7 +34,7 @@ function getDateRange(selectedDate: string, period: Period): [string, string] {
 }
 
 function fmt(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return getISTDateStr(d);
 }
 
 function inRange(date: string, start: string, end: string) {
@@ -44,12 +45,12 @@ function periodLabel(selectedDate: string, period: Period): string {
   const d = new Date(selectedDate + "T12:00:00");
   if (period === "week") {
     const [s, e] = getDateRange(selectedDate, "week");
-    const sf = new Date(s + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
-    const ef = new Date(e + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
+    const sf = new Date(s + "T12:00:00").toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+    const ef = new Date(e + "T12:00:00").toLocaleDateString("en-IN", { month: "short", day: "numeric" });
     return `${sf} – ${ef}`;
   }
   if (period === "month") {
-    return d.toLocaleDateString("en", { month: "long", year: "numeric" });
+    return d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   }
   return d.getFullYear().toString();
 }

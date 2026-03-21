@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { getISTDateStr } from "@/lib/utils";
 
 export interface Expense {
   id: string;
@@ -90,7 +91,7 @@ export function useLifeData() {
   }, [data]);
 
   const uid = () => crypto.randomUUID();
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => getISTDateStr();
 
   const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
     setData(d => ({ ...d, expenses: [...d.expenses, { id: uid(), amount, category, note, date: date || today() }] }));

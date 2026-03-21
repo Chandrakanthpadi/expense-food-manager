@@ -5,12 +5,12 @@ import {
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
-import { cn } from "@/lib/utils";
+import { cn, getISTDateStr } from "@/lib/utils";
 
 type Period = "week" | "month" | "year";
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
-function fmtLocal(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function fmtLocal(d: Date) { return getISTDateStr(d); }
 
 function getDateRange(period: Period, offset: number): [string, string] {
   const now = new Date();
@@ -35,8 +35,8 @@ function getDateRange(period: Period, offset: number): [string, string] {
 function periodLabel(period: Period, offset: number): string {
   const [s, e] = getDateRange(period, offset);
   if (period === "week") {
-    const sf = new Date(s + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
-    const ef = new Date(e + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" });
+    const sf = new Date(s + "T12:00:00").toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+    const ef = new Date(e + "T12:00:00").toLocaleDateString("en-IN", { month: "short", day: "numeric" });
     return `${sf} – ${ef}`;
   }
   if (period === "month") {
@@ -79,7 +79,7 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
       if (wEnd > endDate) wEnd.setTime(endDate.getTime());
       const sl = wStart.toLocaleDateString("en", { month: "short", day: "numeric" });
       const el = wEnd.toLocaleDateString("en", { day: "numeric" });
-      weeks.push({ label: `Wk ${weekNum} (${sl}–${el})`, start: fmtLocal(wStart), end: fmtLocal(wEnd) });
+      weeks.push({ label: `${sl}–${el}`, start: fmtLocal(wStart), end: fmtLocal(wEnd) });
       weekNum++;
       wEnd.setDate(wEnd.getDate() + 1);
       d.setTime(wEnd.getTime());
@@ -309,7 +309,7 @@ const Insights = () => {
       const completedInRange = h.completedDates.filter(d => inRange(d, start, end));
       const rate = daysInRange.length > 0 ? (completedInRange.length / daysInRange.length) * 100 : 0;
       let streak = 0;
-      const today = fmtLocal(new Date());
+  const today = getISTDateStr();
       const d = new Date(today + "T12:00:00");
       while (h.completedDates.includes(fmtLocal(d))) {
         streak++;

@@ -11,6 +11,7 @@ import { TaskList } from "@/components/TaskList";
 import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { SummaryStats } from "@/components/SummaryStats";
+import { getISTDateStr } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,21 +27,21 @@ import {
 const Index = () => {
   const navigate = useNavigate();
   const life = useLifeData();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getISTDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const isToday = selectedDate === todayStr;
   const displayDate = new Date(selectedDate + "T12:00:00");
-  const dateStr = displayDate.toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric" });
+  const dateStr = displayDate.toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-lg mx-auto px-4 py-6 pb-20 space-y-3">
         {/* Header */}
-        <header className="flex items-end justify-between pb-2 section-reveal">
+        <header className="flex items-center justify-between pb-2 section-reveal">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight leading-none">Lifeflow</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            {/* <h1 className="text-2xl font-bold tracking-tight leading-none">Lifeflow</h1> */}
+            <p className="text-sm mt-1">
               {dateStr}
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
             </p>
