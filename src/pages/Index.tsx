@@ -51,53 +51,6 @@ const Index = () => {
           <SummaryStats data={life.data} selectedDate={selectedDate} />
         </div>
 
-        {/* Tasks */}
-        <div className="section-reveal stagger-3">
-          <CollapsibleSection title="Tasks" icon={<ListTodo className="w-4 h-4" />} accentColor="bg-section-tasks" defaultOpen
-            count={life.data.tasks.filter(t => t.date === selectedDate && !t.done).length}>
-            <TaskList tasks={life.data.tasks} selectedDate={selectedDate} onAdd={life.addTask} onToggle={life.toggleTask} onRemove={life.removeTask} />
-          </CollapsibleSection>
-        </div>
-
-        {/* Expenses */}
-        <div className="section-reveal stagger-3">
-          <CollapsibleSection title="Expenses" icon={<DollarSign className="w-4 h-4" />} accentColor="bg-section-expense"
-            count={life.data.expenses.filter(e => e.date === selectedDate).length}>
-            <ExpenseTracker expenses={life.data.expenses} selectedDate={selectedDate} onAdd={life.addExpense} onRemove={life.removeExpense} />
-          </CollapsibleSection>
-        </div>
-
-        {/* Food */}
-        <div className="section-reveal stagger-4">
-          <CollapsibleSection title="Food" icon={<UtensilsCrossed className="w-4 h-4" />} accentColor="bg-section-food"
-            count={life.data.food.filter(f => f.date === selectedDate).length}>
-            <FoodLog food={life.data.food} mealChecks={life.data.mealChecks} selectedDate={selectedDate} onAdd={life.addFood} onRemove={life.removeFood} onToggleMeal={life.toggleMealCheck} />
-          </CollapsibleSection>
-        </div>
-
-        {/* Exercise */}
-        <div className="section-reveal stagger-5">
-          <CollapsibleSection title="Exercise" icon={<Dumbbell className="w-4 h-4" />} accentColor="bg-section-exercise"
-            count={life.data.exercise.filter(e => e.date === selectedDate).length}>
-            <ExerciseLog exercise={life.data.exercise} selectedDate={selectedDate} onAdd={life.addExercise} onRemove={life.removeExercise} />
-          </CollapsibleSection>
-        </div>
-
-        {/* Habits */}
-        <div className="section-reveal stagger-6">
-          <CollapsibleSection title="Habits" icon={<Target className="w-4 h-4" />} accentColor="bg-section-habits"
-            count={life.data.habits.length}>
-            <HabitTracker habits={life.data.habits} selectedDate={selectedDate} onAdd={life.addHabit} onToggle={life.toggleHabit} onRemove={life.removeHabit} />
-          </CollapsibleSection>
-        </div>
-
-        {/* Journal */}
-        <div className="section-reveal stagger-7">
-          <CollapsibleSection title="Journal" icon={<BookOpen className="w-4 h-4" />} accentColor="bg-section-journal"
-            count={life.data.journal.filter(j => j.date === selectedDate).length}>
-            <JournalSection journal={life.data.journal} selectedDate={selectedDate} onAdd={life.addJournal} onRemove={life.removeJournal} />
-          </CollapsibleSection>
-        </div>
       </div>
     </div>
   );
