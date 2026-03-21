@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
-  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award
+  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,6 @@ function inRange(date: string, start: string, end: string) {
   return date >= start && date <= end;
 }
 
-// Daily breakdown helper
 function getDaysInRange(start: string, end: string): string[] {
   const days: string[] = [];
   const d = new Date(start + "T12:00:00");
@@ -60,6 +59,49 @@ function getDaysInRange(start: string, end: string): string[] {
     d.setDate(d.getDate() + 1);
   }
   return days;
+}
+
+// Get sub-period ranges: weeks for month view, months for year view
+function getSubPeriods(period: Period, start: string, end: string): { label: string; start: string; end: string }[] {
+  if (period === "month") {
+    // Split into weeks
+    const weeks: { label: string; start: string; end: string }[] = [];
+    const d = new Date(start + "T12:00:00");
+    const endDate = new Date(end + "T12:00:00");
+    let weekNum = 1;
+    while (d <= endDate) {
+      const wStart = new Date(d);
+      const wEnd = new Date(d);
+      // go to Saturday or end of month
+      while (wEnd.getDay() !== 6 && wEnd < endDate) {
+        wEnd.setDate(wEnd.getDate() + 1);
+      }
+      if (wEnd > endDate) wEnd.setTime(endDate.getTime());
+      const sl = wStart.toLocaleDateString("en", { month: "short", day: "numeric" });
+      const el = wEnd.toLocaleDateString("en", { day: "numeric" });
+      weeks.push({ label: `Wk ${weekNum} (${sl}–${el})`, start: fmtLocal(wStart), end: fmtLocal(wEnd) });
+      weekNum++;
+      wEnd.setDate(wEnd.getDate() + 1);
+      d.setTime(wEnd.getTime());
+    }
+    return weeks;
+  }
+  if (period === "year") {
+    // Split into months
+    const startDate = new Date(start + "T12:00:00");
+    const months: { label: string; start: string; end: string }[] = [];
+    for (let m = 0; m < 12; m++) {
+      const mStart = new Date(startDate.getFullYear(), m, 1);
+      const mEnd = new Date(startDate.getFullYear(), m + 1, 0);
+      months.push({
+        label: mStart.toLocaleDateString("en", { month: "short" }),
+        start: fmtLocal(mStart),
+        end: fmtLocal(mEnd),
+      });
+    }
+    return months;
+  }
+  return [];
 }
 
 interface SectionProps {
@@ -114,14 +156,103 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
   );
 }
 
+// Sub-period breakdown table
+interface SubBreakdownProps {
+  subPeriods: { label: string; start: string; end: string }[];
+  getData: (start: string, end: string) => { spent: number; calories: number; exercise: number; tasks: string };
+  colorClass: string;
+}
+
+function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
+  if (subPeriods.length === 0) return null;
+  const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
+  const maxSpent = Math.max(...rows.map(r => r.spent), 1);
+
+  return (
+    <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
+        <h2 className="text-sm font-semibold">
+          {subPeriods.length <= 6 ? "Weekly Breakdown" : "Monthly Breakdown"}
+        </h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border/40 text-muted-foreground">
+              <th className="text-left px-4 py-2 font-medium">Period</th>
+              <th className="text-right px-3 py-2 font-medium">Spent</th>
+              <th className="text-right px-3 py-2 font-medium">Cal</th>
+              <th className="text-right px-3 py-2 font-medium">Exercise</th>
+              <th className="text-right px-4 py-2 font-medium">Tasks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.label} className="border-b border-border/20 last:border-0">
+                <td className="px-4 py-2 font-medium">{r.label}</td>
+                <td className="text-right px-3 py-2 tabular-nums">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className={cn("h-full rounded-full", colorClass)} style={{ width: `${(r.spent / maxSpent) * 100}%` }} />
+                    </div>
+                    <span>${r.spent.toFixed(0)}</span>
+                  </div>
+                </td>
+                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
+                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
+                <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 const Insights = () => {
   const navigate = useNavigate();
   const { data } = useLifeData();
   const [period, setPeriod] = useState<Period>("month");
   const [offset, setOffset] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
   const isCurrentPeriod = offset === 0;
+  const subPeriods = useMemo(() => getSubPeriods(period, start, end), [period, start, end]);
+
+  const getSubData = useCallback((s: string, e: string) => {
+    const expenses = data.expenses.filter(ex => inRange(ex.date, s, e));
+    const spent = expenses.reduce((sum, ex) => sum + ex.amount, 0);
+    const calories = data.food.filter(f => inRange(f.date, s, e)).reduce((sum, f) => sum + (f.calories || 0), 0);
+    const exercise = data.exercise.filter(ex => inRange(ex.date, s, e)).reduce((sum, ex) => sum + ex.duration, 0);
+    const tasks = data.tasks.filter(t => inRange(t.date, s, e));
+    const done = tasks.filter(t => t.done).length;
+    return { spent, calories, exercise, tasks: `${done}/${tasks.length}` };
+  }, [data]);
+
+  const handleExport = useCallback(async () => {
+    if (!contentRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(contentRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `lifeflow-insights-${periodLabel(period, offset).replace(/\s+/g, "-")}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (err) {
+      console.error("Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, period, offset]);
 
   const insights = useMemo(() => {
     // ── Expenses ──
@@ -154,9 +285,7 @@ const Insights = () => {
       }, {})
     ).sort((a, b) => b[1] - a[1]);
 
-    // Meal completion tracking
     const mealChecks = data.mealChecks.filter(m => inRange(m.date, start, end));
-    const totalDaysWithChecks = mealChecks.length;
     const breakfastCount = mealChecks.filter(m => m.breakfast).length;
     const lunchCount = mealChecks.filter(m => m.lunch).length;
     const dinnerCount = mealChecks.filter(m => m.dinner).length;
@@ -180,7 +309,6 @@ const Insights = () => {
     const habitStats = data.habits.map(h => {
       const completedInRange = h.completedDates.filter(d => inRange(d, start, end));
       const rate = daysInRange.length > 0 ? (completedInRange.length / daysInRange.length) * 100 : 0;
-      // Current streak
       let streak = 0;
       const today = fmtLocal(new Date());
       const d = new Date(today + "T12:00:00");
@@ -214,7 +342,7 @@ const Insights = () => {
 
     return {
       expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length },
-      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, totalDaysWithChecks, daysInPeriod: daysInRange.length },
+      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: daysInRange.length },
       exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown },
       habits: { habitStats, totalHabitDays },
       tasks: { tasksDone, tasksTotal, completionRate, mostProductiveDay },
@@ -236,9 +364,17 @@ const Insights = () => {
           <div className="flex-1">
             <h1 className="text-xl font-bold tracking-tight leading-none">Insights</h1>
           </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {exporting ? "Exporting…" : "Export"}
+          </button>
         </header>
 
-        {/* Period toggle + navigation */}
+        {/* Period toggle */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1 bg-muted rounded-lg p-0.5">
             {(["week", "month", "year"] as Period[]).map(p => (
@@ -258,18 +394,12 @@ const Insights = () => {
 
         {/* Date navigation */}
         <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
-          <button
-            onClick={() => setOffset(o => o - 1)}
-            className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
-          >
+          <button onClick={() => setOffset(o => o - 1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => setOffset(0)}
-            className={cn(
-              "text-sm font-medium px-3 py-0.5 rounded-md transition-all",
-              isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95"
-            )}
+            className={cn("text-sm font-medium px-3 py-0.5 rounded-md transition-all", isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95")}
           >
             {periodLabel(period, offset)}
           </button>
@@ -282,169 +412,171 @@ const Insights = () => {
           </button>
         </div>
 
-        {/* ── Expenses ── */}
-        <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
-          <MetricRow label="Total spent" value={`$${insights.expenses.totalSpent.toFixed(2)}`} />
-          <MetricRow label="Daily average" value={`$${insights.expenses.avgPerDay.toFixed(2)}`} />
-          <MetricRow label="Transactions" value={String(insights.expenses.count)} />
-          {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
-            <MetricRow
-              label="Biggest day"
-              value={`$${insights.expenses.highestDay.amount.toFixed(2)}`}
-              sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
-            />
+        {/* Exportable content area */}
+        <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
+          {/* Sub-period breakdown table (month→weeks, year→months) */}
+          {(period === "month" || period === "year") && (
+            <SubBreakdown subPeriods={subPeriods} getData={getSubData} colorClass="bg-section-expense" />
           )}
-          {insights.expenses.categoryBreakdown.length > 0 && (
-            <>
-              <p className="text-[11px] text-muted-foreground font-medium mt-3 mb-1">By category</p>
-              <MiniBar
-                values={insights.expenses.categoryBreakdown.map(([label, amount]) => ({ label, amount }))}
-                max={insights.expenses.maxCatAmount}
-                colorClass="bg-section-expense"
+
+          {/* ── Expenses ── */}
+          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
+            <MetricRow label="Total spent" value={`$${insights.expenses.totalSpent.toFixed(2)}`} />
+            <MetricRow label="Daily average" value={`$${insights.expenses.avgPerDay.toFixed(2)}`} />
+            <MetricRow label="Transactions" value={String(insights.expenses.count)} />
+            {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
+              <MetricRow
+                label="Biggest day"
+                value={`$${insights.expenses.highestDay.amount.toFixed(2)}`}
+                sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
               />
-            </>
-          )}
-        </Section>
-
-        {/* ── Food ── */}
-        <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
-          <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
-          <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
-          <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
-
-          {/* Meal completion stats */}
-          <div className="mt-3 space-y-1.5">
-            <p className="text-[11px] text-muted-foreground font-medium mb-1">Meal consistency</p>
-            {[
-              { label: "Breakfast", count: insights.food.breakfastCount },
-              { label: "Lunch", count: insights.food.lunchCount },
-              { label: "Dinner", count: insights.food.dinnerCount },
-              { label: "Snack", count: insights.food.snackCount },
-            ].map(m => {
-              const rate = insights.food.daysInPeriod > 0 ? (m.count / insights.food.daysInPeriod) * 100 : 0;
-              return (
-                <div key={m.label} className="space-y-0.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{m.label}</span>
-                    <span className="tabular-nums font-medium">{m.count}/{insights.food.daysInPeriod} <span className="text-muted-foreground">({Math.round(rate)}%)</span></span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-section-food rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-            {insights.food.allThreeMeals > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-2">
-                ✅ All 3 main meals on <span className="font-semibold text-foreground">{insights.food.allThreeMeals}</span> day{insights.food.allThreeMeals !== 1 ? "s" : ""}
-              </p>
             )}
-          </div>
+            {insights.expenses.categoryBreakdown.length > 0 && (
+              <>
+                <p className="text-[11px] text-muted-foreground font-medium mt-3 mb-1">By category</p>
+                <MiniBar
+                  values={insights.expenses.categoryBreakdown.map(([label, amount]) => ({ label, amount }))}
+                  max={insights.expenses.maxCatAmount}
+                  colorClass="bg-section-expense"
+                />
+              </>
+            )}
+          </Section>
 
-          {insights.food.mealBreakdown.length > 0 && (
-            <div className="mt-3 space-y-1">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">Food entries by meal</p>
-              {insights.food.mealBreakdown.map(([meal, count]) => (
-                <div key={meal} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground capitalize">{meal}</span>
-                  <span className="tabular-nums font-medium">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* ── Exercise ── */}
-        <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
-          <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
-          <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
-          <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
-          <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysInRange.length}`} />
-          {insights.exercise.activityBreakdown.length > 0 && (
-            <div className="mt-3 space-y-1">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">By activity</p>
-              {insights.exercise.activityBreakdown.map(([activity, mins]) => (
-                <div key={activity} className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">{activity}</span>
-                  <span className="tabular-nums font-medium">{mins} min</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* ── Habits ── */}
-        <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
-          <MetricRow label="Active days" value={String(insights.habits.totalHabitDays)} sub={`of ${daysInRange.length}`} />
-          {insights.habits.habitStats.length > 0 ? (
-            <div className="mt-3 space-y-2.5">
-              {insights.habits.habitStats.map(h => (
-                <div key={h.name} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">{h.name}</span>
-                    <div className="flex items-center gap-2">
-                      {h.streak > 0 && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-orange-500 font-medium">
-                          <Flame className="w-3 h-3" />{h.streak}d
-                        </span>
-                      )}
-                      <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
+          {/* ── Food ── */}
+          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+            <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
+            <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
+            <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
+            <div className="mt-3 space-y-1.5">
+              <p className="text-[11px] text-muted-foreground font-medium mb-1">Meal consistency</p>
+              {[
+                { label: "Breakfast", count: insights.food.breakfastCount },
+                { label: "Lunch", count: insights.food.lunchCount },
+                { label: "Dinner", count: insights.food.dinnerCount },
+                { label: "Snack", count: insights.food.snackCount },
+              ].map(m => {
+                const rate = insights.food.daysInPeriod > 0 ? (m.count / insights.food.daysInPeriod) * 100 : 0;
+                return (
+                  <div key={m.label} className="space-y-0.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{m.label}</span>
+                      <span className="tabular-nums font-medium">{m.count}/{insights.food.daysInPeriod} <span className="text-muted-foreground">({Math.round(rate)}%)</span></span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-section-food rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
                     </div>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-section-habits rounded-full transition-all duration-500"
-                      style={{ width: `${h.rate}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground mt-2">No habits tracked yet</p>
-          )}
-        </Section>
-
-        {/* ── Tasks ── */}
-        <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
-          <MetricRow label="Completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
-          <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
-          {insights.tasks.mostProductiveDay && (
-            <MetricRow
-              label="Most productive day"
-              value={`${insights.tasks.mostProductiveDay.done} tasks`}
-              sub={new Date(insights.tasks.mostProductiveDay.date + "T12:00:00").toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" })}
-            />
-          )}
-          {insights.tasks.tasksTotal > 0 && (
-            <div className="mt-3 flex items-center gap-2">
-              {insights.tasks.completionRate >= 80 ? (
-                <span className="flex items-center gap-1 text-xs text-green-600"><Award className="w-3.5 h-3.5" />Great productivity!</span>
-              ) : insights.tasks.completionRate >= 50 ? (
-                <span className="flex items-center gap-1 text-xs text-amber-600"><TrendingUp className="w-3.5 h-3.5" />Getting there, keep going!</span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingDown className="w-3.5 h-3.5" />Try breaking tasks smaller</span>
+                );
+              })}
+              {insights.food.allThreeMeals > 0 && (
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  ✅ All 3 main meals on <span className="font-semibold text-foreground">{insights.food.allThreeMeals}</span> day{insights.food.allThreeMeals !== 1 ? "s" : ""}
+                </p>
               )}
             </div>
-          )}
-        </Section>
+            {insights.food.mealBreakdown.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <p className="text-[11px] text-muted-foreground font-medium mb-1">Food entries by meal</p>
+                {insights.food.mealBreakdown.map(([meal, count]) => (
+                  <div key={meal} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground capitalize">{meal}</span>
+                    <span className="tabular-nums font-medium">{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
 
-        {/* ── Journal ── */}
-        <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
-          <MetricRow label="Entries" value={String(insights.journal.count)} />
-          <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
-          {insights.journal.moodBreakdown.length > 0 && (
-            <div className="mt-3 space-y-1">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">Mood distribution</p>
-              {insights.journal.moodBreakdown.map(([mood, count]) => (
-                <div key={mood} className="flex justify-between text-xs">
-                  <span>{mood}</span>
-                  <span className="tabular-nums font-medium">{count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
+          {/* ── Exercise ── */}
+          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
+            <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
+            <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
+            <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
+            <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysInRange.length}`} />
+            {insights.exercise.activityBreakdown.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <p className="text-[11px] text-muted-foreground font-medium mb-1">By activity</p>
+                {insights.exercise.activityBreakdown.map(([activity, mins]) => (
+                  <div key={activity} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{activity}</span>
+                    <span className="tabular-nums font-medium">{mins} min</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          {/* ── Habits ── */}
+          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
+            <MetricRow label="Active days" value={String(insights.habits.totalHabitDays)} sub={`of ${daysInRange.length}`} />
+            {insights.habits.habitStats.length > 0 ? (
+              <div className="mt-3 space-y-2.5">
+                {insights.habits.habitStats.map(h => (
+                  <div key={h.name} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">{h.name}</span>
+                      <div className="flex items-center gap-2">
+                        {h.streak > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium">
+                            <Flame className="w-3 h-3" />{h.streak}d
+                          </span>
+                        )}
+                        <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-section-habits rounded-full transition-all duration-500" style={{ width: `${h.rate}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">No habits tracked yet</p>
+            )}
+          </Section>
+
+          {/* ── Tasks ── */}
+          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
+            <MetricRow label="Completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
+            <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
+            {insights.tasks.mostProductiveDay && (
+              <MetricRow
+                label="Most productive day"
+                value={`${insights.tasks.mostProductiveDay.done} tasks`}
+                sub={new Date(insights.tasks.mostProductiveDay.date + "T12:00:00").toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" })}
+              />
+            )}
+            {insights.tasks.tasksTotal > 0 && (
+              <div className="mt-3 flex items-center gap-2">
+                {insights.tasks.completionRate >= 80 ? (
+                  <span className="flex items-center gap-1 text-xs text-accent"><Award className="w-3.5 h-3.5" />Great productivity!</span>
+                ) : insights.tasks.completionRate >= 50 ? (
+                  <span className="flex items-center gap-1 text-xs text-primary"><TrendingUp className="w-3.5 h-3.5" />Getting there, keep going!</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingDown className="w-3.5 h-3.5" />Try breaking tasks smaller</span>
+                )}
+              </div>
+            )}
+          </Section>
+
+          {/* ── Journal ── */}
+          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
+            <MetricRow label="Entries" value={String(insights.journal.count)} />
+            <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
+            {insights.journal.moodBreakdown.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <p className="text-[11px] text-muted-foreground font-medium mb-1">Mood distribution</p>
+                {insights.journal.moodBreakdown.map(([mood, count]) => (
+                  <div key={mood} className="flex justify-between text-xs">
+                    <span>{mood}</span>
+                    <span className="tabular-nums font-medium">{count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </div>
       </div>
     </div>
   );
