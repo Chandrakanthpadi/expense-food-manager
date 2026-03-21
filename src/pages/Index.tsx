@@ -85,7 +85,7 @@ const Index = () => {
         <div className="section-reveal stagger-4">
           <CollapsibleSection title="Food" icon={<UtensilsCrossed className="w-4 h-4" />} accentColor="bg-section-food"
             count={life.data.food.filter(f => f.date === selectedDate).length}>
-            <FoodLog food={life.data.food} selectedDate={selectedDate} onAdd={life.addFood} onRemove={life.removeFood} />
+            <FoodLog food={life.data.food} mealChecks={life.data.mealChecks} selectedDate={selectedDate} onAdd={life.addFood} onRemove={life.removeFood} onToggleMeal={life.toggleMealCheck} />
           </CollapsibleSection>
         </div>
 
