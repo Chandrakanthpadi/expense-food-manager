@@ -186,7 +186,7 @@ export function useLifeData() {
   return {
     data,
     addExpense, removeExpense,
-    addFood, removeFood,
+    addFood, removeFood, toggleMealCheck,
     addExercise, removeExercise,
     addHabit, toggleHabit, removeHabit,
     addTask, toggleTask, removeTask,
