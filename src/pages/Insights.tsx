@@ -144,6 +144,15 @@ const Insights = () => {
       }, {})
     ).sort((a, b) => b[1] - a[1]);
 
+    // Meal completion tracking
+    const mealChecks = data.mealChecks.filter(m => inRange(m.date, start, end));
+    const totalDaysWithChecks = mealChecks.length;
+    const breakfastCount = mealChecks.filter(m => m.breakfast).length;
+    const lunchCount = mealChecks.filter(m => m.lunch).length;
+    const dinnerCount = mealChecks.filter(m => m.dinner).length;
+    const snackCount = mealChecks.filter(m => m.snack).length;
+    const allThreeMeals = mealChecks.filter(m => m.breakfast && m.lunch && m.dinner).length;
+
     // ── Exercise ──
     const exercise = data.exercise.filter(e => inRange(e.date, start, end));
     const totalMinutes = exercise.reduce((s, e) => s + e.duration, 0);
