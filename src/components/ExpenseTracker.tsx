@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import type { Expense } from "@/hooks/useLifeData";
 
-const categories = ["Food", "Transport", "Bills", "Shopping", "Health", "Other"];
+const categories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
 
 interface Props {
   expenses: Expense[];
