@@ -47,30 +47,52 @@ const Index = () => {
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               onClick={() => navigate("/insights")}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
+              title="Insights"
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              Insights
+              <span className="hidden sm:inline">Insights</span>
             </button>
             <button
               onClick={life.exportData}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
               title="Export all data"
             >
               <Download className="w-3.5 h-3.5" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
+              title="Import data"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  life.importData(file);
+                  e.target.value = "";
+                }
+              }}
+            />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive bg-muted rounded-md px-3 py-2 active:scale-95 transition-all"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
                   title="Reset all data"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Reset
+                  <span className="hidden sm:inline">Reset</span>
                 </button>
               </AlertDialogTrigger>
               <AlertDialogContent>
