@@ -4,51 +4,51 @@
 
 @layer base {
   :root {
-    --background: 30 33% 96%;
-    --foreground: 20 10% 15%;
+    --background: 210 40% 97%;
+    --foreground: 215 25% 12%;
 
-    --card: 30 25% 98%;
-    --card-foreground: 20 10% 15%;
+    --card: 210 40% 99%;
+    --card-foreground: 215 25% 12%;
 
-    --popover: 30 25% 98%;
-    --popover-foreground: 20 10% 15%;
+    --popover: 210 40% 99%;
+    --popover-foreground: 215 25% 12%;
 
-    --primary: 24 60% 50%;
+    --primary: 213 70% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 20% 92%;
-    --secondary-foreground: 20 10% 25%;
+    --secondary: 210 30% 93%;
+    --secondary-foreground: 215 20% 25%;
 
-    --muted: 30 15% 93%;
-    --muted-foreground: 20 8% 50%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 12% 48%;
 
-    --accent: 160 35% 45%;
+    --accent: 199 60% 42%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 65% 55%;
+    --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 88%;
-    --input: 30 15% 88%;
-    --ring: 24 60% 50%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 213 70% 45%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 215 20% 28%;
+    --sidebar-primary: 215 25% 12%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 210 30% 95%;
+    --sidebar-accent-foreground: 215 25% 12%;
+    --sidebar-border: 210 18% 91%;
+    --sidebar-ring: 213 70% 50%;
 
-    --section-expense: 24 70% 52%;
-    --section-food: 145 40% 42%;
-    --section-exercise: 210 55% 50%;
-    --section-habits: 280 40% 55%;
-    --section-tasks: 340 50% 52%;
-    --section-journal: 35 70% 55%;
+    --section-expense: 213 65% 48%;
+    --section-food: 168 50% 40%;
+    --section-exercise: 199 60% 45%;
+    --section-habits: 245 45% 55%;
+    --section-tasks: 190 55% 40%;
+    --section-journal: 230 40% 55%;
   }
 }
 
