@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
         name: "Lifeflow — Your Daily Companion",
         short_name: "Lifeflow",
         description: "A minimal life manager for tracking expenses, food, exercise, habits, and more.",
-        theme_color: "#f5f0eb",
-        background_color: "#f5f0eb",
+        theme_color: "#1e5fa8",
+        background_color: "#f0f5fb",
         display: "standalone",
         start_url: "/",
         icons: [
