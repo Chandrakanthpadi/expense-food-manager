@@ -63,16 +63,31 @@ function getDaysInRange(start: string, end: string): string[] {
 
 // Get sub-period ranges: weeks for month view, months for year view
 function getSubPeriods(period: Period, start: string, end: string): { label: string; start: string; end: string }[] {
+  if (period === "week") {
+    // Split into days
+    const days: { label: string; start: string; end: string }[] = [];
+    const d = new Date(start + "T12:00:00");
+    const endDate = new Date(end + "T12:00:00");
+    while (d <= endDate) {
+      const dateStr = fmtLocal(d);
+      days.push({
+        label: d.toLocaleDateString("en", { weekday: "short", day: "numeric" }),
+        start: dateStr,
+        end: dateStr,
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    days.push({ label: "Total", start, end });
+    return days;
+  }
   if (period === "month") {
     // Split into weeks
     const weeks: { label: string; start: string; end: string }[] = [];
     const d = new Date(start + "T12:00:00");
     const endDate = new Date(end + "T12:00:00");
-    let weekNum = 1;
     while (d <= endDate) {
       const wStart = new Date(d);
       const wEnd = new Date(d);
-      // go to Saturday or end of month
       while (wEnd.getDay() !== 6 && wEnd < endDate) {
         wEnd.setDate(wEnd.getDate() + 1);
       }
@@ -80,15 +95,13 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
       const sl = wStart.toLocaleDateString("en", { month: "short", day: "numeric" });
       const el = wEnd.toLocaleDateString("en", { day: "numeric" });
       weeks.push({ label: `${sl}–${el}`, start: fmtLocal(wStart), end: fmtLocal(wEnd) });
-      weekNum++;
       wEnd.setDate(wEnd.getDate() + 1);
       d.setTime(wEnd.getTime());
     }
-    weeks.push({ label: `Total`, start: start, end: end });
+    weeks.push({ label: "Total", start, end });
     return weeks;
   }
   if (period === "year") {
-    // Split into months
     const startDate = new Date(start + "T12:00:00");
     const months: { label: string; start: string; end: string }[] = [];
     for (let m = 0; m < 12; m++) {
@@ -100,7 +113,7 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
         end: fmtLocal(mEnd),
       });
     }
-    months.push({ label: `Total`, start: start, end: end });
+    months.push({ label: "Total", start, end });
     return months;
   }
   return [];
@@ -163,9 +176,10 @@ interface SubBreakdownProps {
   subPeriods: { label: string; start: string; end: string }[];
   getData: (start: string, end: string) => { spent: number; calories: number; exercise: number; tasks: string };
   colorClass: string;
+  breakdownTitle?: string;
 }
 
-function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
+function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
   const maxSpent = Math.max(...rows.map(r => r.spent), 1);
@@ -174,7 +188,7 @@ function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
     <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
         <h2 className="text-sm font-semibold">
-          {subPeriods.length <= 6 ? "Weekly Breakdown" : "Monthly Breakdown"}
+          {breakdownTitle || "Breakdown"}
         </h2>
       </div>
       <div className="overflow-x-auto">
@@ -413,10 +427,13 @@ const Insights = () => {
 
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* Sub-period breakdown table (month→weeks, year→months) */}
-          {(period === "month" || period === "year") && (
-            <SubBreakdown subPeriods={subPeriods} getData={getSubData} colorClass="bg-section-expense" />
-          )}
+          {/* Sub-period breakdown table (week→days, month→weeks, year→months) */}
+          <SubBreakdown
+            subPeriods={subPeriods}
+            getData={getSubData}
+            colorClass="bg-section-expense"
+            breakdownTitle={period === "week" ? "Daily Breakdown" : period === "month" ? "Weekly Breakdown" : "Monthly Breakdown"}
+          />
 
           {/* ── Expenses ── */}
           <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
