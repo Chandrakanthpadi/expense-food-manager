@@ -63,16 +63,31 @@ function getDaysInRange(start: string, end: string): string[] {
 
 // Get sub-period ranges: weeks for month view, months for year view
 function getSubPeriods(period: Period, start: string, end: string): { label: string; start: string; end: string }[] {
+  if (period === "week") {
+    // Split into days
+    const days: { label: string; start: string; end: string }[] = [];
+    const d = new Date(start + "T12:00:00");
+    const endDate = new Date(end + "T12:00:00");
+    while (d <= endDate) {
+      const dateStr = fmtLocal(d);
+      days.push({
+        label: d.toLocaleDateString("en", { weekday: "short", day: "numeric" }),
+        start: dateStr,
+        end: dateStr,
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    days.push({ label: "Total", start, end });
+    return days;
+  }
   if (period === "month") {
     // Split into weeks
     const weeks: { label: string; start: string; end: string }[] = [];
     const d = new Date(start + "T12:00:00");
     const endDate = new Date(end + "T12:00:00");
-    let weekNum = 1;
     while (d <= endDate) {
       const wStart = new Date(d);
       const wEnd = new Date(d);
-      // go to Saturday or end of month
       while (wEnd.getDay() !== 6 && wEnd < endDate) {
         wEnd.setDate(wEnd.getDate() + 1);
       }
@@ -80,15 +95,13 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
       const sl = wStart.toLocaleDateString("en", { month: "short", day: "numeric" });
       const el = wEnd.toLocaleDateString("en", { day: "numeric" });
       weeks.push({ label: `${sl}–${el}`, start: fmtLocal(wStart), end: fmtLocal(wEnd) });
-      weekNum++;
       wEnd.setDate(wEnd.getDate() + 1);
       d.setTime(wEnd.getTime());
     }
-    weeks.push({ label: `Total`, start: start, end: end });
+    weeks.push({ label: "Total", start, end });
     return weeks;
   }
   if (period === "year") {
-    // Split into months
     const startDate = new Date(start + "T12:00:00");
     const months: { label: string; start: string; end: string }[] = [];
     for (let m = 0; m < 12; m++) {
@@ -100,7 +113,7 @@ function getSubPeriods(period: Period, start: string, end: string): { label: str
         end: fmtLocal(mEnd),
       });
     }
-    months.push({ label: `Total`, start: start, end: end });
+    months.push({ label: "Total", start, end });
     return months;
   }
   return [];
