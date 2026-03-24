@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, Upload, BarChart3, RotateCcw } from "lucide-react";
-import { useRef } from "react";
+import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { ExpenseTracker } from "@/components/ExpenseTracker";
@@ -13,22 +12,10 @@ import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { SummaryStats } from "@/components/SummaryStats";
 import { getISTDateStr } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 const Index = () => {
   const navigate = useNavigate();
   const life = useLifeData();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const todayStr = getISTDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
@@ -42,7 +29,6 @@ const Index = () => {
         {/* Header */}
         <header className="flex items-center justify-between pb-2 section-reveal">
           <div>
-            {/* <h1 className="text-2xl font-bold tracking-tight leading-none">Lifeflow</h1> */}
             <p className="text-sm mt-1">
               {dateStr}
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
@@ -51,69 +37,18 @@ const Index = () => {
           <div className="flex gap-1.5">
             <button
               onClick={() => navigate("/insights")}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
+              className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted rounded-md active:scale-95 transition-all"
               title="Insights"
             >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Insights</span>
+              <BarChart3 className="w-4 h-4" />
             </button>
             <button
-              onClick={life.exportData}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
-              title="Export all data"
+              onClick={() => navigate("/settings")}
+              className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted rounded-md active:scale-95 transition-all"
+              title="Settings"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export</span>
+              <Settings className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
-              title="Import data"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  life.importData(file);
-                  e.target.value = "";
-                }
-              }}
-            />
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <button
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive bg-muted rounded-md px-2.5 py-2 active:scale-95 transition-all"
-                  title="Reset all data"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Reset</span>
-                </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reset all data?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete all your entries — expenses, food logs, tasks, habits, journal, and exercises. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={life.resetData}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Yes, reset everything
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </header>
 
