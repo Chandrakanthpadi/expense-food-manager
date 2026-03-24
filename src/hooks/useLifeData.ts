@@ -189,6 +189,21 @@ export function useLifeData() {
     URL.revokeObjectURL(url);
   }, [data]);
 
+  const importData = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target?.result as string);
+        const merged: LifeData = { ...defaultData, ...imported };
+        setData(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch {
+        alert("Invalid file. Please select a valid Lifeflow export JSON.");
+      }
+    };
+    reader.readAsText(file);
+  }, []);
+
   return {
     data,
     addExpense, removeExpense,
@@ -198,6 +213,7 @@ export function useLifeData() {
     addTask, toggleTask, removeTask,
     addJournal, removeJournal,
     exportData,
+    importData,
     resetData,
   };
 }
