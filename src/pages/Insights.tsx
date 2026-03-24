@@ -187,7 +187,7 @@ function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
     <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
         <h2 className="text-sm font-semibold">
-          {subPeriods.length <= 6 ? "Weekly Breakdown" : "Monthly Breakdown"}
+          {subPeriods.length <= 9 ? "Daily Breakdown" : subPeriods.length <= 7 ? "Weekly Breakdown" : "Monthly Breakdown"}
         </h2>
       </div>
       <div className="overflow-x-auto">
