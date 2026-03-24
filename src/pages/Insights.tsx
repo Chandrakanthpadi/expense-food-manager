@@ -427,10 +427,13 @@ const Insights = () => {
 
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* Sub-period breakdown table (month→weeks, year→months) */}
-          {(period === "month" || period === "year") && (
-            <SubBreakdown subPeriods={subPeriods} getData={getSubData} colorClass="bg-section-expense" />
-          )}
+          {/* Sub-period breakdown table (week→days, month→weeks, year→months) */}
+          <SubBreakdown
+            subPeriods={subPeriods}
+            getData={getSubData}
+            colorClass="bg-section-expense"
+            breakdownTitle={period === "week" ? "Daily Breakdown" : period === "month" ? "Weekly Breakdown" : "Monthly Breakdown"}
+          />
 
           {/* ── Expenses ── */}
           <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
