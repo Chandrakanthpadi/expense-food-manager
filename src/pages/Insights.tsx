@@ -176,9 +176,10 @@ interface SubBreakdownProps {
   subPeriods: { label: string; start: string; end: string }[];
   getData: (start: string, end: string) => { spent: number; calories: number; exercise: number; tasks: string };
   colorClass: string;
+  breakdownTitle?: string;
 }
 
-function SubBreakdown({ subPeriods, getData, colorClass }: SubBreakdownProps) {
+function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
   const maxSpent = Math.max(...rows.map(r => r.spent), 1);
