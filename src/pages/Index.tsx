@@ -28,6 +28,7 @@ import {
 const Index = () => {
   const navigate = useNavigate();
   const life = useLifeData();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const todayStr = getISTDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
