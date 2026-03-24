@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, BarChart3, RotateCcw } from "lucide-react";
+import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, Download, Upload, BarChart3, RotateCcw } from "lucide-react";
+import { useRef } from "react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { ExpenseTracker } from "@/components/ExpenseTracker";
