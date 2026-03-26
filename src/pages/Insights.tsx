@@ -256,6 +256,157 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
   );
 }
 
+// Day detail view component
+function DayDetail({ date, data: lifeData, onBack }: { date: string; data: any; onBack: () => void }) {
+  const d = new Date(date + "T12:00:00");
+  const label = d.toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const expenses = lifeData.expenses.filter((e: any) => e.date === date);
+  const food = lifeData.food.filter((f: any) => f.date === date);
+  const exercise = lifeData.exercise.filter((e: any) => e.date === date);
+  const tasks = lifeData.tasks.filter((t: any) => t.date === date);
+  const journal = lifeData.journal.filter((j: any) => j.date === date);
+  const mealCheck = lifeData.mealChecks.find((m: any) => m.date === date);
+  const habits = lifeData.habits.map((h: any) => ({
+    name: h.name,
+    done: h.completedDates.includes(date),
+  }));
+
+  const totalSpent = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalCals = food.reduce((s: number, f: any) => s + (f.calories || 0), 0);
+  const totalExercise = exercise.reduce((s: number, e: any) => s + e.duration, 0);
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-primary hover:underline active:scale-95 transition-all">
+        <ChevronLeft className="w-3.5 h-3.5" />Back
+      </button>
+      <div className="bg-card rounded-xl border border-border/60 px-4 py-3">
+        <h2 className="text-sm font-bold">{label}</h2>
+      </div>
+
+      {/* Summary row */}
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { label: "Spent", value: `₹${totalSpent.toFixed(0)}` },
+          { label: "Calories", value: totalCals > 0 ? totalCals.toLocaleString() : "–" },
+          { label: "Exercise", value: totalExercise > 0 ? `${totalExercise}m` : "–" },
+          { label: "Tasks", value: `${tasks.filter((t: any) => t.done).length}/${tasks.length}` },
+        ].map(s => (
+          <div key={s.label} className="bg-card rounded-lg border border-border/60 px-3 py-2 text-center">
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
+            <p className="text-sm font-semibold tabular-nums">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Expenses detail */}
+      {expenses.length > 0 && (
+        <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
+          {expenses.map((e: any) => (
+            <div key={e.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <div>
+                <span className="text-xs font-medium">{e.category}</span>
+                {e.note && <span className="text-[10px] text-muted-foreground ml-2">{e.note}</span>}
+              </div>
+              <span className="text-xs font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Food detail */}
+      {food.length > 0 && (
+        <Section title="Food" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          {food.map((f: any) => (
+            <div key={f.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <div>
+                <span className="text-xs font-medium capitalize">{f.meal}</span>
+                <span className="text-[10px] text-muted-foreground ml-2">{f.items}</span>
+              </div>
+              {f.calories && <span className="text-xs tabular-nums text-muted-foreground">{f.calories} cal</span>}
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Meal checks */}
+      {mealCheck && (
+        <Section title="Meal Check" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          <div className="flex gap-3 flex-wrap">
+            {(["breakfast", "lunch", "dinner", "snack"] as const).map(m => (
+              <span key={m} className={cn("text-xs px-2 py-1 rounded-md", mealCheck[m] ? "bg-section-food/20 text-foreground font-medium" : "text-muted-foreground bg-muted")}>
+                {mealCheck[m] ? "✅" : "❌"} {m}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Exercise detail */}
+      {exercise.length > 0 && (
+        <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
+          {exercise.map((e: any) => (
+            <div key={e.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className="text-xs font-medium">{e.activity}</span>
+              <span className="text-xs tabular-nums text-muted-foreground">{e.duration} min</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Habits */}
+      {habits.some((h: any) => h.done) && (
+        <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
+          {habits.map((h: any) => (
+            <div key={h.name} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className="text-xs font-medium">{h.name}</span>
+              <span className={cn("text-xs", h.done ? "text-accent" : "text-muted-foreground")}>{h.done ? "✅ Done" : "—"}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Tasks detail */}
+      {tasks.length > 0 && (
+        <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
+          {tasks.map((t: any) => (
+            <div key={t.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className={cn("text-xs", t.done ? "line-through text-muted-foreground" : "font-medium")}>{t.text}</span>
+              <span className="text-xs">{t.done ? "✅" : "⬜"}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Journal */}
+      {journal.length > 0 && (
+        <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
+          {journal.map((j: any) => (
+            <div key={j.id} className="py-1.5 border-b border-border/20 last:border-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs">{j.mood}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{j.content}</p>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Empty state */}
+      {expenses.length === 0 && food.length === 0 && exercise.length === 0 && tasks.length === 0 && journal.length === 0 && !mealCheck && (
+        <div className="text-center py-8 text-muted-foreground text-sm">No data recorded for this day</div>
+      )}
+    </div>
+  );
+}
+
+interface DrillLevel {
+  label: string;
+  start: string;
+  end: string;
+  level: "year" | "month" | "week" | "day";
+}
+
 const Insights = () => {
   const navigate = useNavigate();
   const { data } = useLifeData();
@@ -263,10 +414,21 @@ const Insights = () => {
   const [offset, setOffset] = useState(0);
   const [exporting, setExporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [drillStack, setDrillStack] = useState<DrillLevel[]>([]);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
   const isCurrentPeriod = offset === 0;
-  const subPeriods = useMemo(() => getSubPeriods(period, start, end), [period, start, end]);
+
+  // Current drill level
+  const currentDrill = drillStack.length > 0 ? drillStack[drillStack.length - 1] : null;
+  const activeStart = currentDrill?.start || start;
+  const activeEnd = currentDrill?.end || end;
+  const activeLevel = currentDrill?.level || period;
+
+  const subPeriods = useMemo(() => {
+    if (activeLevel === "day") return [];
+    return getSubPeriods(activeLevel as Period, activeStart, activeEnd);
+  }, [activeLevel, activeStart, activeEnd]);
 
   const getSubData = useCallback((s: string, e: string) => {
     const expenses = data.expenses.filter(ex => inRange(ex.date, s, e));
