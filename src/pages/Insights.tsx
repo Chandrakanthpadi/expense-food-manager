@@ -588,7 +588,7 @@ const Insights = () => {
             {(["week", "month", "year"] as Period[]).map(p => (
               <button
                 key={p}
-                onClick={() => { setPeriod(p); setOffset(0); }}
+                onClick={() => { setPeriod(p); setOffset(0); setDrillStack([]); }}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
                   period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
