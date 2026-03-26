@@ -829,6 +829,8 @@ const Insights = () => {
               </div>
             )}
           </Section>
+            </>
+          )}
         </div>
       </div>
     </div>
