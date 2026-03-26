@@ -171,15 +171,31 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
   );
 }
 
+// Determine next drill-down level
+function getNextLevel(current: "year" | "month" | "week" | "day"): "month" | "week" | "day" | null {
+  if (current === "year") return "month";
+  if (current === "month") return "week";
+  if (current === "week") return "day";
+  return null;
+}
+
+function getBreakdownTitle(level: "year" | "month" | "week" | "day"): string {
+  if (level === "year") return "Monthly Breakdown";
+  if (level === "month") return "Weekly Breakdown";
+  if (level === "week") return "Daily Breakdown";
+  return "Details";
+}
+
 // Sub-period breakdown table
 interface SubBreakdownProps {
   subPeriods: { label: string; start: string; end: string }[];
   getData: (start: string, end: string) => { spent: number; calories: number; exercise: number; tasks: string };
   colorClass: string;
   breakdownTitle?: string;
+  onRowClick?: (start: string, end: string, label: string) => void;
 }
 
-function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBreakdownProps) {
+function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowClick }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
   const maxSpent = Math.max(...rows.map(r => r.spent), 1);
@@ -203,19 +219,36 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBr
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.label} className="border-b border-border/20 last:border-0">
-                <td className="px-4 py-2 font-medium">{r.label}</td>
-                <td className="text-right px-3 py-2 tabular-nums">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>₹{r.spent.toFixed(0)}</span>
-                  </div>
-                </td>
-                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
-                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
-                <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
-              </tr>
-            ))}
+            {rows.map(r => {
+              const isTotal = r.label === "Total";
+              const isClickable = !isTotal && onRowClick;
+              return (
+                <tr
+                  key={r.label}
+                  onClick={() => isClickable && onRowClick!(r.start, r.end, r.label)}
+                  className={cn(
+                    "border-b border-border/20 last:border-0",
+                    isTotal && "bg-muted/40 font-semibold",
+                    isClickable && "cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                  )}
+                >
+                  <td className="px-4 py-2 font-medium">
+                    <span className="flex items-center gap-1">
+                      {r.label}
+                      {isClickable && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+                    </span>
+                  </td>
+                  <td className="text-right px-3 py-2 tabular-nums">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>₹{r.spent.toFixed(0)}</span>
+                    </div>
+                  </td>
+                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
+                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
+                  <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
