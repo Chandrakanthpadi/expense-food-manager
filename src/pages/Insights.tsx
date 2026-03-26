@@ -620,15 +620,57 @@ const Insights = () => {
           </button>
         </div>
 
+        {/* Drill-down breadcrumb */}
+        {drillStack.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap text-xs">
+            <button
+              onClick={() => setDrillStack([])}
+              className="text-primary hover:underline active:scale-95 transition-all"
+            >
+              {periodLabel(period, offset)}
+            </button>
+            {drillStack.map((level, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                {i < drillStack.length - 1 ? (
+                  <button
+                    onClick={() => setDrillStack(drillStack.slice(0, i + 1))}
+                    className="text-primary hover:underline active:scale-95 transition-all"
+                  >
+                    {level.label}
+                  </button>
+                ) : (
+                  <span className="font-medium text-foreground">{level.label}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* Sub-period breakdown table (week→days, month→weeks, year→months) */}
-          <SubBreakdown
-            subPeriods={subPeriods}
-            getData={getSubData}
-            colorClass="bg-section-expense"
-            breakdownTitle={period === "week" ? "Daily Breakdown" : period === "month" ? "Weekly Breakdown" : "Monthly Breakdown"}
-          />
+          {/* Day detail view */}
+          {activeLevel === "day" ? (
+            <DayDetail
+              date={activeStart}
+              data={data}
+              onBack={() => setDrillStack(s => s.slice(0, -1))}
+            />
+          ) : (
+            <>
+              {/* Sub-period breakdown table */}
+              <SubBreakdown
+                subPeriods={subPeriods}
+                getData={getSubData}
+                colorClass="bg-section-expense"
+                breakdownTitle={getBreakdownTitle(activeLevel as any)}
+                onRowClick={(rowStart, rowEnd, label) => {
+                  const next = getNextLevel(activeLevel as any);
+                  if (next) {
+                    setDrillStack(s => [...s, { label, start: rowStart, end: rowEnd, level: next }]);
+                  }
+                }}
+              />
 
           {/* ── Expenses ── */}
           <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
