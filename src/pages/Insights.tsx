@@ -602,17 +602,17 @@ const Insights = () => {
 
         {/* Date navigation */}
         <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
-          <button onClick={() => setOffset(o => o - 1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
+          <button onClick={() => { setOffset(o => o - 1); setDrillStack([]); }} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setOffset(0)}
+            onClick={() => { setOffset(0); setDrillStack([]); }}
             className={cn("text-sm font-medium px-3 py-0.5 rounded-md transition-all", isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95")}
           >
             {periodLabel(period, offset)}
           </button>
           <button
-            onClick={() => setOffset(o => o + 1)}
+            onClick={() => { setOffset(o => o + 1); setDrillStack([]); }}
             disabled={isCurrentPeriod}
             className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
