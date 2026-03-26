@@ -10,9 +10,10 @@ interface CollapsibleSectionProps {
   defaultOpen?: boolean;
   count?: number;
   collapsible?: boolean;
+  rightLabel?: ReactNode;
 }
 
-export function CollapsibleSection({ title, icon, accentColor, children, count, collapsible = false, defaultOpen = true }: CollapsibleSectionProps) {
+export function CollapsibleSection({ title, icon, accentColor, children, count, collapsible = false, defaultOpen = true, rightLabel }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -25,6 +26,7 @@ export function CollapsibleSection({ title, icon, accentColor, children, count, 
           {icon}
         </span>
         <span className="flex-1 font-semibold text-[0.95rem] tracking-tight">{title}</span>
+        {rightLabel && <span className="text-xs font-medium text-muted-foreground tabular-nums">{rightLabel}</span>}
         {count !== undefined && count > 0 && (
           <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 tabular-nums">{count}</span>
         )}
