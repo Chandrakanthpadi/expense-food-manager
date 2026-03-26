@@ -23,6 +23,11 @@ const Index = () => {
   const displayDate = new Date(selectedDate + "T12:00:00");
   const dateStr = displayDate.toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" });
 
+  const selectedMonth = selectedDate.slice(0, 7);
+  const monthlyExpenseTotal = life.data.expenses
+    .filter(e => e.date.startsWith(selectedMonth))
+    .reduce((s, e) => s + e.amount, 0);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-lg mx-auto px-4 py-6 pb-20 space-y-3">
@@ -67,7 +72,8 @@ const Index = () => {
         {/* Expenses */}
         <div className="section-reveal stagger-3">
           <CollapsibleSection title="Expenses" icon={<DollarSign className="w-4 h-4" />} accentColor="bg-section-expense"
-            count={life.data.expenses.filter(e => e.date === selectedDate).length}>
+            count={life.data.expenses.filter(e => e.date === selectedDate).length}
+            rightLabel={`₹${monthlyExpenseTotal.toFixed(0)} this month`}>
             <ExpenseTracker expenses={life.data.expenses} selectedDate={selectedDate} onAdd={life.addExpense} onRemove={life.removeExpense} />
           </CollapsibleSection>
         </div>
