@@ -171,15 +171,31 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
   );
 }
 
+// Determine next drill-down level
+function getNextLevel(current: "year" | "month" | "week" | "day"): "month" | "week" | "day" | null {
+  if (current === "year") return "month";
+  if (current === "month") return "week";
+  if (current === "week") return "day";
+  return null;
+}
+
+function getBreakdownTitle(level: "year" | "month" | "week" | "day"): string {
+  if (level === "year") return "Monthly Breakdown";
+  if (level === "month") return "Weekly Breakdown";
+  if (level === "week") return "Daily Breakdown";
+  return "Details";
+}
+
 // Sub-period breakdown table
 interface SubBreakdownProps {
   subPeriods: { label: string; start: string; end: string }[];
   getData: (start: string, end: string) => { spent: number; calories: number; exercise: number; tasks: string };
   colorClass: string;
   breakdownTitle?: string;
+  onRowClick?: (start: string, end: string, label: string) => void;
 }
 
-function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBreakdownProps) {
+function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowClick }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
   const maxSpent = Math.max(...rows.map(r => r.spent), 1);
@@ -203,24 +219,192 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle }: SubBr
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
-              <tr key={r.label} className="border-b border-border/20 last:border-0">
-                <td className="px-4 py-2 font-medium">{r.label}</td>
-                <td className="text-right px-3 py-2 tabular-nums">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>₹{r.spent.toFixed(0)}</span>
-                  </div>
-                </td>
-                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
-                <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
-                <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
-              </tr>
-            ))}
+            {rows.map(r => {
+              const isTotal = r.label === "Total";
+              const isClickable = !isTotal && onRowClick;
+              return (
+                <tr
+                  key={r.label}
+                  onClick={() => isClickable && onRowClick!(r.start, r.end, r.label)}
+                  className={cn(
+                    "border-b border-border/20 last:border-0",
+                    isTotal && "bg-muted/40 font-semibold",
+                    isClickable && "cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                  )}
+                >
+                  <td className="px-4 py-2 font-medium">
+                    <span className="flex items-center gap-1">
+                      {r.label}
+                      {isClickable && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
+                    </span>
+                  </td>
+                  <td className="text-right px-3 py-2 tabular-nums">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>₹{r.spent.toFixed(0)}</span>
+                    </div>
+                  </td>
+                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
+                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
+                  <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
   );
+}
+
+// Day detail view component
+function DayDetail({ date, data: lifeData, onBack }: { date: string; data: any; onBack: () => void }) {
+  const d = new Date(date + "T12:00:00");
+  const label = d.toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const expenses = lifeData.expenses.filter((e: any) => e.date === date);
+  const food = lifeData.food.filter((f: any) => f.date === date);
+  const exercise = lifeData.exercise.filter((e: any) => e.date === date);
+  const tasks = lifeData.tasks.filter((t: any) => t.date === date);
+  const journal = lifeData.journal.filter((j: any) => j.date === date);
+  const mealCheck = lifeData.mealChecks.find((m: any) => m.date === date);
+  const habits = lifeData.habits.map((h: any) => ({
+    name: h.name,
+    done: h.completedDates.includes(date),
+  }));
+
+  const totalSpent = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+  const totalCals = food.reduce((s: number, f: any) => s + (f.calories || 0), 0);
+  const totalExercise = exercise.reduce((s: number, e: any) => s + e.duration, 0);
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-primary hover:underline active:scale-95 transition-all">
+        <ChevronLeft className="w-3.5 h-3.5" />Back
+      </button>
+      <div className="bg-card rounded-xl border border-border/60 px-4 py-3">
+        <h2 className="text-sm font-bold">{label}</h2>
+      </div>
+
+      {/* Summary row */}
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { label: "Spent", value: `₹${totalSpent.toFixed(0)}` },
+          { label: "Calories", value: totalCals > 0 ? totalCals.toLocaleString() : "–" },
+          { label: "Exercise", value: totalExercise > 0 ? `${totalExercise}m` : "–" },
+          { label: "Tasks", value: `${tasks.filter((t: any) => t.done).length}/${tasks.length}` },
+        ].map(s => (
+          <div key={s.label} className="bg-card rounded-lg border border-border/60 px-3 py-2 text-center">
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
+            <p className="text-sm font-semibold tabular-nums">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Expenses detail */}
+      {expenses.length > 0 && (
+        <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
+          {expenses.map((e: any) => (
+            <div key={e.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <div>
+                <span className="text-xs font-medium">{e.category}</span>
+                {e.note && <span className="text-[10px] text-muted-foreground ml-2">{e.note}</span>}
+              </div>
+              <span className="text-xs font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Food detail */}
+      {food.length > 0 && (
+        <Section title="Food" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          {food.map((f: any) => (
+            <div key={f.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <div>
+                <span className="text-xs font-medium capitalize">{f.meal}</span>
+                <span className="text-[10px] text-muted-foreground ml-2">{f.items}</span>
+              </div>
+              {f.calories && <span className="text-xs tabular-nums text-muted-foreground">{f.calories} cal</span>}
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Meal checks */}
+      {mealCheck && (
+        <Section title="Meal Check" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          <div className="flex gap-3 flex-wrap">
+            {(["breakfast", "lunch", "dinner", "snack"] as const).map(m => (
+              <span key={m} className={cn("text-xs px-2 py-1 rounded-md", mealCheck[m] ? "bg-section-food/20 text-foreground font-medium" : "text-muted-foreground bg-muted")}>
+                {mealCheck[m] ? "✅" : "❌"} {m}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Exercise detail */}
+      {exercise.length > 0 && (
+        <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
+          {exercise.map((e: any) => (
+            <div key={e.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className="text-xs font-medium">{e.activity}</span>
+              <span className="text-xs tabular-nums text-muted-foreground">{e.duration} min</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Habits */}
+      {habits.some((h: any) => h.done) && (
+        <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
+          {habits.map((h: any) => (
+            <div key={h.name} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className="text-xs font-medium">{h.name}</span>
+              <span className={cn("text-xs", h.done ? "text-accent" : "text-muted-foreground")}>{h.done ? "✅ Done" : "—"}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Tasks detail */}
+      {tasks.length > 0 && (
+        <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
+          {tasks.map((t: any) => (
+            <div key={t.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
+              <span className={cn("text-xs", t.done ? "line-through text-muted-foreground" : "font-medium")}>{t.text}</span>
+              <span className="text-xs">{t.done ? "✅" : "⬜"}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Journal */}
+      {journal.length > 0 && (
+        <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
+          {journal.map((j: any) => (
+            <div key={j.id} className="py-1.5 border-b border-border/20 last:border-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs">{j.mood}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{j.content}</p>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {/* Empty state */}
+      {expenses.length === 0 && food.length === 0 && exercise.length === 0 && tasks.length === 0 && journal.length === 0 && !mealCheck && (
+        <div className="text-center py-8 text-muted-foreground text-sm">No data recorded for this day</div>
+      )}
+    </div>
+  );
+}
+
+interface DrillLevel {
+  label: string;
+  start: string;
+  end: string;
+  level: "year" | "month" | "week" | "day";
 }
 
 const Insights = () => {
@@ -230,10 +414,21 @@ const Insights = () => {
   const [offset, setOffset] = useState(0);
   const [exporting, setExporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [drillStack, setDrillStack] = useState<DrillLevel[]>([]);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
   const isCurrentPeriod = offset === 0;
-  const subPeriods = useMemo(() => getSubPeriods(period, start, end), [period, start, end]);
+
+  // Current drill level
+  const currentDrill = drillStack.length > 0 ? drillStack[drillStack.length - 1] : null;
+  const activeStart = currentDrill?.start || start;
+  const activeEnd = currentDrill?.end || end;
+  const activeLevel = currentDrill?.level || period;
+
+  const subPeriods = useMemo(() => {
+    if (activeLevel === "day") return [];
+    return getSubPeriods(activeLevel as Period, activeStart, activeEnd);
+  }, [activeLevel, activeStart, activeEnd]);
 
   const getSubData = useCallback((s: string, e: string) => {
     const expenses = data.expenses.filter(ex => inRange(ex.date, s, e));
@@ -393,7 +588,7 @@ const Insights = () => {
             {(["week", "month", "year"] as Period[]).map(p => (
               <button
                 key={p}
-                onClick={() => { setPeriod(p); setOffset(0); }}
+                onClick={() => { setPeriod(p); setOffset(0); setDrillStack([]); }}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
                   period === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -407,17 +602,17 @@ const Insights = () => {
 
         {/* Date navigation */}
         <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
-          <button onClick={() => setOffset(o => o - 1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
+          <button onClick={() => { setOffset(o => o - 1); setDrillStack([]); }} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setOffset(0)}
+            onClick={() => { setOffset(0); setDrillStack([]); }}
             className={cn("text-sm font-medium px-3 py-0.5 rounded-md transition-all", isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95")}
           >
             {periodLabel(period, offset)}
           </button>
           <button
-            onClick={() => setOffset(o => o + 1)}
+            onClick={() => { setOffset(o => o + 1); setDrillStack([]); }}
             disabled={isCurrentPeriod}
             className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
@@ -425,15 +620,57 @@ const Insights = () => {
           </button>
         </div>
 
+        {/* Drill-down breadcrumb */}
+        {drillStack.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap text-xs">
+            <button
+              onClick={() => setDrillStack([])}
+              className="text-primary hover:underline active:scale-95 transition-all"
+            >
+              {periodLabel(period, offset)}
+            </button>
+            {drillStack.map((level, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                {i < drillStack.length - 1 ? (
+                  <button
+                    onClick={() => setDrillStack(drillStack.slice(0, i + 1))}
+                    className="text-primary hover:underline active:scale-95 transition-all"
+                  >
+                    {level.label}
+                  </button>
+                ) : (
+                  <span className="font-medium text-foreground">{level.label}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* Sub-period breakdown table (week→days, month→weeks, year→months) */}
-          <SubBreakdown
-            subPeriods={subPeriods}
-            getData={getSubData}
-            colorClass="bg-section-expense"
-            breakdownTitle={period === "week" ? "Daily Breakdown" : period === "month" ? "Weekly Breakdown" : "Monthly Breakdown"}
-          />
+          {/* Day detail view */}
+          {activeLevel === "day" ? (
+            <DayDetail
+              date={activeStart}
+              data={data}
+              onBack={() => setDrillStack(s => s.slice(0, -1))}
+            />
+          ) : (
+            <>
+              {/* Sub-period breakdown table */}
+              <SubBreakdown
+                subPeriods={subPeriods}
+                getData={getSubData}
+                colorClass="bg-section-expense"
+                breakdownTitle={getBreakdownTitle(activeLevel as any)}
+                onRowClick={(rowStart, rowEnd, label) => {
+                  const next = getNextLevel(activeLevel as any);
+                  if (next) {
+                    setDrillStack(s => [...s, { label, start: rowStart, end: rowEnd, level: next }]);
+                  }
+                }}
+              />
 
           {/* ── Expenses ── */}
           <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
@@ -592,6 +829,8 @@ const Insights = () => {
               </div>
             )}
           </Section>
+            </>
+          )}
         </div>
       </div>
     </div>
