@@ -147,11 +147,11 @@ function Section({ title, icon, colorClass, children, onTitleClick }: SectionPro
 
 function MetricRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex items-baseline justify-between py-1.5 border-b border-border/30 last:border-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex items-baseline justify-between py-2 border-b border-border/30 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <div className="text-right">
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
-        {sub && <span className="text-[10px] text-muted-foreground ml-1.5">{sub}</span>}
+        <span className="text-base font-semibold tabular-nums">{value}</span>
+        {sub && <span className="text-xs text-muted-foreground ml-1.5">{sub}</span>}
       </div>
     </div>
   );
