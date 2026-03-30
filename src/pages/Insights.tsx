@@ -819,7 +819,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Journal ── */}
-          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
+          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal" onTitleClick={() => navigate("/insights/journal")}>
             <MetricRow label="Entries" value={String(insights.journal.count)} />
             <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
             {insights.journal.moodBreakdown.length > 0 && (
