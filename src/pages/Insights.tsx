@@ -216,11 +216,11 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border/40 text-muted-foreground">
-              <th className="text-left px-4 py-2 font-medium">Period</th>
-              <th className="text-right px-3 py-2 font-medium">Spent</th>
-              <th className="text-right px-3 py-2 font-medium">Cal</th>
-              <th className="text-right px-3 py-2 font-medium">Exercise</th>
-              <th className="text-right px-4 py-2 font-medium">Tasks</th>
+              <th className="text-left px-4 py-2.5 font-medium">Period</th>
+              <th className="text-right px-3 py-2.5 font-medium">Spent</th>
+              <th className="text-right px-3 py-2.5 font-medium">Cal</th>
+              <th className="text-right px-3 py-2.5 font-medium">Exercise</th>
+              <th className="text-right px-4 py-2.5 font-medium">Tasks</th>
             </tr>
           </thead>
           <tbody>
