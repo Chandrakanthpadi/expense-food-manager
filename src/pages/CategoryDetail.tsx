@@ -77,13 +77,6 @@ const CategoryDetail = () => {
   const [pickingEnd, setPickingEnd] = useState(false);
 
   const cat = category && CATEGORIES[category] ? CATEGORIES[category] : null;
-  if (!cat) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Category not found</p>
-      </div>
-    );
-  }
 
   const [start, end] = getFilterRange(filterMode, monthOffset, yearOffset, customStart, customEnd);
   const label = filterLabel(filterMode, monthOffset, yearOffset, customStart, customEnd);
