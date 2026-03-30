@@ -691,7 +691,7 @@ const Insights = () => {
             )}
             {insights.expenses.categoryBreakdown.length > 0 && (
               <>
-                <p className="text-[11px] text-muted-foreground font-medium mt-3 mb-1">By category</p>
+                <p className="text-xs text-muted-foreground font-medium mt-3 mb-1">By category</p>
                 <MiniBar
                   values={insights.expenses.categoryBreakdown.map(([label, amount]) => ({ label, amount }))}
                   max={insights.expenses.maxCatAmount}
