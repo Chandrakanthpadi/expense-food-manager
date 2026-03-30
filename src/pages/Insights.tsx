@@ -780,7 +780,7 @@ const Insights = () => {
                             <Flame className="w-3 h-3" />{h.streak}d
                           </span>
                         )}
-                        <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
                       </div>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
