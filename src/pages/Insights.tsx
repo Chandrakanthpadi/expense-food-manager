@@ -124,16 +124,21 @@ interface SectionProps {
   icon: React.ReactNode;
   colorClass: string;
   children: React.ReactNode;
+  onTitleClick?: () => void;
 }
 
-function Section({ title, icon, colorClass, children }: SectionProps) {
+function Section({ title, icon, colorClass, children, onTitleClick }: SectionProps) {
   return (
     <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
+      <div
+        className={cn("flex items-center gap-2 px-4 py-3 border-b border-border/40", onTitleClick && "cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors")}
+        onClick={onTitleClick}
+      >
         <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-primary-foreground", colorClass)}>
           {icon}
         </span>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold flex-1">{title}</h2>
+        {onTitleClick && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -673,7 +678,7 @@ const Insights = () => {
               />
 
           {/* ── Expenses ── */}
-          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
+          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense" onTitleClick={() => navigate("/insights/expenses")}>
             <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
             <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
             <MetricRow label="Transactions" value={String(insights.expenses.count)} />
@@ -697,7 +702,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Food ── */}
-          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food" onTitleClick={() => navigate("/insights/food")}>
             <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
             <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
             <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
@@ -742,7 +747,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Exercise ── */}
-          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
+          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise" onTitleClick={() => navigate("/insights/exercise")}>
             <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
             <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
             <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
@@ -761,7 +766,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Habits ── */}
-          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
+          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits" onTitleClick={() => navigate("/insights/habits")}>
             <MetricRow label="Active days" value={String(insights.habits.totalHabitDays)} sub={`of ${daysInRange.length}`} />
             {insights.habits.habitStats.length > 0 ? (
               <div className="mt-3 space-y-2.5">
@@ -790,7 +795,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Tasks ── */}
-          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
+          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks" onTitleClick={() => navigate("/insights/tasks")}>
             <MetricRow label="Completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
             <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
             {insights.tasks.mostProductiveDay && (
@@ -814,7 +819,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Journal ── */}
-          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal">
+          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal" onTitleClick={() => navigate("/insights/journal")}>
             <MetricRow label="Entries" value={String(insights.journal.count)} />
             <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
             {insights.journal.moodBreakdown.length > 0 && (
