@@ -702,7 +702,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Food ── */}
-          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food">
+          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food" onTitleClick={() => navigate("/insights/food")}>
             <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
             <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
             <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
