@@ -124,16 +124,21 @@ interface SectionProps {
   icon: React.ReactNode;
   colorClass: string;
   children: React.ReactNode;
+  onTitleClick?: () => void;
 }
 
-function Section({ title, icon, colorClass, children }: SectionProps) {
+function Section({ title, icon, colorClass, children, onTitleClick }: SectionProps) {
   return (
     <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
+      <div
+        className={cn("flex items-center gap-2 px-4 py-3 border-b border-border/40", onTitleClick && "cursor-pointer hover:bg-muted/50 active:bg-muted/70 transition-colors")}
+        onClick={onTitleClick}
+      >
         <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-primary-foreground", colorClass)}>
           {icon}
         </span>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold flex-1">{title}</h2>
+        {onTitleClick && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
       </div>
       <div className="p-4">{children}</div>
     </div>
