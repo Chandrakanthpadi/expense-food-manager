@@ -162,14 +162,14 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
     <div className="space-y-1.5 mt-2">
       {values.map(v => (
         <div key={v.label} className="flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground w-16 truncate">{v.label}</span>
+          <span className="text-xs text-muted-foreground w-16 truncate">{v.label}</span>
           <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
             <div
               className={cn("h-full rounded-full transition-all duration-500", colorClass)}
               style={{ width: `${max > 0 ? (v.amount / max) * 100 : 0}%` }}
             />
           </div>
-          <span className="text-[11px] tabular-nums font-medium w-12 text-right">₹{v.amount.toFixed(0)}</span>
+          <span className="text-xs tabular-nums font-medium w-14 text-right">₹{v.amount.toFixed(0)}</span>
         </div>
       ))}
     </div>
