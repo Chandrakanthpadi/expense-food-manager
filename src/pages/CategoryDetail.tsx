@@ -285,75 +285,106 @@ const CategoryDetail = () => {
           </div>
         </div>
 
-        {/* Entries list */}
-        <div className="space-y-1">
-          {category === "expenses" && (entries as typeof data.expenses).map(e => (
-            <div key={e.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-medium">{e.category}</span>
-                {e.note && <span className="text-[10px] text-muted-foreground ml-2">{e.note}</span>}
-                <p className="text-[10px] text-muted-foreground">{formatDate(e.date)}</p>
+        {/* Entries list grouped by day */}
+        <div className="space-y-4">
+          {category === "expenses" && groupByDate(entries as typeof data.expenses).map(group => (
+            <div key={group.date} className="space-y-1">
+              <div className="flex items-center justify-between px-1 pt-1">
+                <h3 className="text-xs font-semibold text-foreground">{formatDayHeader(group.date)}</h3>
+                <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                  ₹{group.items.reduce((s, e) => s + e.amount, 0).toFixed(0)}
+                </span>
               </div>
-              <span className="text-sm font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+              <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
+                {group.items.map(e => (
+                  <div key={e.id} className="px-4 py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">{e.category}</span>
+                      {e.note && <span className="text-xs text-muted-foreground ml-2">{e.note}</span>}
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
 
-          {category === "food" && (entries as typeof data.food).map(f => (
-            <div key={f.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-medium capitalize">{f.meal}</span>
-                <span className="text-[10px] text-muted-foreground ml-2">{f.items}</span>
-                <p className="text-[10px] text-muted-foreground">{formatDate(f.date)}</p>
+          {category === "food" && groupByDate(entries as typeof data.food).map(group => (
+            <div key={group.date} className="space-y-1">
+              <h3 className="text-xs font-semibold text-foreground px-1 pt-1">{formatDayHeader(group.date)}</h3>
+              <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
+                {group.items.map(f => (
+                  <div key={f.id} className="px-4 py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium capitalize">{f.meal}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{f.items}</span>
+                    </div>
+                    {f.calories && <span className="text-sm tabular-nums text-muted-foreground">{f.calories} cal</span>}
+                  </div>
+                ))}
               </div>
-              {f.calories && <span className="text-xs tabular-nums text-muted-foreground">{f.calories} cal</span>}
             </div>
           ))}
 
-          {category === "exercise" && (entries as typeof data.exercise).map(e => (
-            <div key={e.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-medium">{e.activity}</span>
-                <p className="text-[10px] text-muted-foreground">{formatDate(e.date)}</p>
+          {category === "exercise" && groupByDate(entries as typeof data.exercise).map(group => (
+            <div key={group.date} className="space-y-1">
+              <h3 className="text-xs font-semibold text-foreground px-1 pt-1">{formatDayHeader(group.date)}</h3>
+              <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
+                {group.items.map(e => (
+                  <div key={e.id} className="px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-sm font-medium">{e.activity}</span>
+                    <span className="text-sm font-semibold tabular-nums">{e.duration} min</span>
+                  </div>
+                ))}
               </div>
-              <span className="text-xs font-semibold tabular-nums">{e.duration} min</span>
             </div>
           ))}
 
-          {category === "tasks" && (entries as typeof data.tasks).map(t => (
-            <div key={t.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5 flex items-center justify-between">
-              <div>
-                <span className={cn("text-xs", t.done ? "line-through text-muted-foreground" : "font-medium")}>{t.text}</span>
-                <p className="text-[10px] text-muted-foreground">{formatDate(t.date)}</p>
+          {category === "tasks" && groupByDate(entries as typeof data.tasks).map(group => (
+            <div key={group.date} className="space-y-1">
+              <h3 className="text-xs font-semibold text-foreground px-1 pt-1">{formatDayHeader(group.date)}</h3>
+              <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
+                {group.items.map(t => (
+                  <div key={t.id} className="px-4 py-2.5 flex items-center justify-between">
+                    <span className={cn("text-sm", t.done ? "line-through text-muted-foreground" : "font-medium")}>{t.text}</span>
+                    <span className="text-sm">{t.done ? "✅" : "⬜"}</span>
+                  </div>
+                ))}
               </div>
-              <span className="text-xs">{t.done ? "✅" : "⬜"}</span>
             </div>
           ))}
 
-          {category === "journal" && (entries as typeof data.journal).map(j => (
-            <div key={j.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs">{j.mood}</span>
-                <span className="text-[10px] text-muted-foreground">{formatDate(j.date)}</span>
+          {category === "journal" && groupByDate(entries as typeof data.journal).map(group => (
+            <div key={group.date} className="space-y-1">
+              <h3 className="text-xs font-semibold text-foreground px-1 pt-1">{formatDayHeader(group.date)}</h3>
+              <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
+                {group.items.map(j => (
+                  <div key={j.id} className="px-4 py-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">{j.mood}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{j.content}</p>
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-muted-foreground">{j.content}</p>
             </div>
           ))}
 
           {category === "habits" && (entries as any[]).map((h: any) => (
-            <div key={h.id} className="bg-card rounded-lg border border-border/40 px-4 py-2.5">
+            <div key={h.id} className="bg-card rounded-xl border border-border/40 px-4 py-3">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium">{h.name}</span>
-                <span className="text-xs tabular-nums text-muted-foreground">{h.total} days</span>
+                <span className="text-sm font-medium">{h.name}</span>
+                <span className="text-sm tabular-nums text-muted-foreground">{h.total} days</span>
               </div>
               {h.completedInRange.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {h.completedInRange.slice(0, 20).map((d: string) => (
-                    <span key={d} className="text-[9px] bg-section-habits/15 text-foreground px-1.5 py-0.5 rounded">
+                    <span key={d} className="text-[10px] bg-section-habits/15 text-foreground px-1.5 py-0.5 rounded">
                       {formatDate(d)}
                     </span>
                   ))}
                   {h.completedInRange.length > 20 && (
-                    <span className="text-[9px] text-muted-foreground">+{h.completedInRange.length - 20} more</span>
+                    <span className="text-[10px] text-muted-foreground">+{h.completedInRange.length - 20} more</span>
                   )}
                 </div>
               )}

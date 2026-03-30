@@ -824,7 +824,7 @@ const Insights = () => {
             <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
             {insights.journal.moodBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">Mood distribution</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Mood distribution</p>
                 {insights.journal.moodBreakdown.map(([mood, count]) => (
                   <div key={mood} className="flex justify-between text-xs">
                     <span>{mood}</span>
