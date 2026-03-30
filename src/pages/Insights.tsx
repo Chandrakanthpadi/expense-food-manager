@@ -754,7 +754,7 @@ const Insights = () => {
             <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysInRange.length}`} />
             {insights.exercise.activityBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">By activity</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">By activity</p>
                 {insights.exercise.activityBreakdown.map(([activity, mins]) => (
                   <div key={activity} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{activity}</span>
