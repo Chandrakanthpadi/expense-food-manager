@@ -766,7 +766,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Habits ── */}
-          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits">
+          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits" onTitleClick={() => navigate("/insights/habits")}>
             <MetricRow label="Active days" value={String(insights.habits.totalHabitDays)} sub={`of ${daysInRange.length}`} />
             {insights.habits.habitStats.length > 0 ? (
               <div className="mt-3 space-y-2.5">
