@@ -735,7 +735,7 @@ const Insights = () => {
             </div>
             {insights.food.mealBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">Food entries by meal</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Food entries by meal</p>
                 {insights.food.mealBreakdown.map(([meal, count]) => (
                   <div key={meal} className="flex justify-between text-xs">
                     <span className="text-muted-foreground capitalize">{meal}</span>
