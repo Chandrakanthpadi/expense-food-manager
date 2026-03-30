@@ -707,7 +707,7 @@ const Insights = () => {
             <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
             <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
             <div className="mt-3 space-y-1.5">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">Meal consistency</p>
+              <p className="text-xs text-muted-foreground font-medium mb-1">Meal consistency</p>
               {[
                 { label: "Breakfast", count: insights.food.breakfastCount },
                 { label: "Lunch", count: insights.food.lunchCount },
