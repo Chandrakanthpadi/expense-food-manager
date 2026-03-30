@@ -137,7 +137,7 @@ function Section({ title, icon, colorClass, children, onTitleClick }: SectionPro
         <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-primary-foreground", colorClass)}>
           {icon}
         </span>
-        <h2 className="text-sm font-semibold flex-1">{title}</h2>
+        <h2 className="text-base font-semibold flex-1">{title}</h2>
         {onTitleClick && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
       </div>
       <div className="p-4">{children}</div>
