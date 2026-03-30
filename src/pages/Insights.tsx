@@ -747,7 +747,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Exercise ── */}
-          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise">
+          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise" onTitleClick={() => navigate("/insights/exercise")}>
             <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
             <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
             <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
