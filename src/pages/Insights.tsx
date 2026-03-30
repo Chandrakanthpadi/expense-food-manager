@@ -137,7 +137,7 @@ function Section({ title, icon, colorClass, children, onTitleClick }: SectionPro
         <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-primary-foreground", colorClass)}>
           {icon}
         </span>
-        <h2 className="text-sm font-semibold flex-1">{title}</h2>
+        <h2 className="text-base font-semibold flex-1">{title}</h2>
         {onTitleClick && <ChevronRight className="w-4 h-4 text-muted-foreground" />}
       </div>
       <div className="p-4">{children}</div>
@@ -147,11 +147,11 @@ function Section({ title, icon, colorClass, children, onTitleClick }: SectionPro
 
 function MetricRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex items-baseline justify-between py-1.5 border-b border-border/30 last:border-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex items-baseline justify-between py-2 border-b border-border/30 last:border-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <div className="text-right">
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
-        {sub && <span className="text-[10px] text-muted-foreground ml-1.5">{sub}</span>}
+        <span className="text-base font-semibold tabular-nums">{value}</span>
+        {sub && <span className="text-xs text-muted-foreground ml-1.5">{sub}</span>}
       </div>
     </div>
   );
@@ -162,14 +162,14 @@ function MiniBar({ values, max, colorClass }: { values: { label: string; amount:
     <div className="space-y-1.5 mt-2">
       {values.map(v => (
         <div key={v.label} className="flex items-center gap-2">
-          <span className="text-[11px] text-muted-foreground w-16 truncate">{v.label}</span>
+          <span className="text-xs text-muted-foreground w-16 truncate">{v.label}</span>
           <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
             <div
               className={cn("h-full rounded-full transition-all duration-500", colorClass)}
               style={{ width: `${max > 0 ? (v.amount / max) * 100 : 0}%` }}
             />
           </div>
-          <span className="text-[11px] tabular-nums font-medium w-12 text-right">₹{v.amount.toFixed(0)}</span>
+          <span className="text-xs tabular-nums font-medium w-14 text-right">₹{v.amount.toFixed(0)}</span>
         </div>
       ))}
     </div>
@@ -213,14 +213,14 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
         </h2>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40 text-muted-foreground">
-              <th className="text-left px-4 py-2 font-medium">Period</th>
-              <th className="text-right px-3 py-2 font-medium">Spent</th>
-              <th className="text-right px-3 py-2 font-medium">Cal</th>
-              <th className="text-right px-3 py-2 font-medium">Exercise</th>
-              <th className="text-right px-4 py-2 font-medium">Tasks</th>
+              <th className="text-left px-4 py-2.5 font-medium">Period</th>
+              <th className="text-right px-3 py-2.5 font-medium">Spent</th>
+              <th className="text-right px-3 py-2.5 font-medium">Cal</th>
+              <th className="text-right px-3 py-2.5 font-medium">Exercise</th>
+              <th className="text-right px-4 py-2.5 font-medium">Tasks</th>
             </tr>
           </thead>
           <tbody>
@@ -691,7 +691,7 @@ const Insights = () => {
             )}
             {insights.expenses.categoryBreakdown.length > 0 && (
               <>
-                <p className="text-[11px] text-muted-foreground font-medium mt-3 mb-1">By category</p>
+                <p className="text-xs text-muted-foreground font-medium mt-3 mb-1">By category</p>
                 <MiniBar
                   values={insights.expenses.categoryBreakdown.map(([label, amount]) => ({ label, amount }))}
                   max={insights.expenses.maxCatAmount}
@@ -707,7 +707,7 @@ const Insights = () => {
             <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
             <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
             <div className="mt-3 space-y-1.5">
-              <p className="text-[11px] text-muted-foreground font-medium mb-1">Meal consistency</p>
+              <p className="text-xs text-muted-foreground font-medium mb-1">Meal consistency</p>
               {[
                 { label: "Breakfast", count: insights.food.breakfastCount },
                 { label: "Lunch", count: insights.food.lunchCount },
@@ -735,7 +735,7 @@ const Insights = () => {
             </div>
             {insights.food.mealBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">Food entries by meal</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Food entries by meal</p>
                 {insights.food.mealBreakdown.map(([meal, count]) => (
                   <div key={meal} className="flex justify-between text-xs">
                     <span className="text-muted-foreground capitalize">{meal}</span>
@@ -754,7 +754,7 @@ const Insights = () => {
             <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysInRange.length}`} />
             {insights.exercise.activityBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">By activity</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">By activity</p>
                 {insights.exercise.activityBreakdown.map(([activity, mins]) => (
                   <div key={activity} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{activity}</span>
@@ -780,7 +780,7 @@ const Insights = () => {
                             <Flame className="w-3 h-3" />{h.streak}d
                           </span>
                         )}
-                        <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
                       </div>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -824,7 +824,7 @@ const Insights = () => {
             <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
             {insights.journal.moodBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
-                <p className="text-[11px] text-muted-foreground font-medium mb-1">Mood distribution</p>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Mood distribution</p>
                 {insights.journal.moodBreakdown.map(([mood, count]) => (
                   <div key={mood} className="flex justify-between text-xs">
                     <span>{mood}</span>
