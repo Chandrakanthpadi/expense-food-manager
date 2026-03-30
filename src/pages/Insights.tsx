@@ -678,7 +678,7 @@ const Insights = () => {
               />
 
           {/* ── Expenses ── */}
-          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
+          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense" onTitleClick={() => navigate("/insights/expenses")}>
             <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
             <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
             <MetricRow label="Transactions" value={String(insights.expenses.count)} />
