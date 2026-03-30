@@ -795,7 +795,7 @@ const Insights = () => {
           </Section>
 
           {/* ── Tasks ── */}
-          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks">
+          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks" onTitleClick={() => navigate("/insights/tasks")}>
             <MetricRow label="Completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
             <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
             {insights.tasks.mostProductiveDay && (
