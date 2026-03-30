@@ -213,7 +213,7 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
         </h2>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40 text-muted-foreground">
               <th className="text-left px-4 py-2.5 font-medium">Period</th>
