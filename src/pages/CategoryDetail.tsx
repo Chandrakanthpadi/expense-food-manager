@@ -152,6 +152,24 @@ const CategoryDetail = () => {
     return d.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" });
   };
 
+  const formatDayHeader = (dateStr: string) => {
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  };
+
+  // Group array entries by date
+  function groupByDate<T extends { date: string }>(items: T[]): { date: string; items: T[] }[] {
+    const map = new Map<string, T[]>();
+    items.forEach(item => {
+      const group = map.get(item.date) || [];
+      group.push(item);
+      map.set(item.date, group);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, items]) => ({ date, items }));
+  }
+
   if (!cat) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
