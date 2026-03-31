@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { cn, getISTDateStr } from "@/lib/utils";
-import { createPdfFileName, exportElementToPdf } from "@/lib/pdfExport";
+import { createPdfFileName, exportReportToPdf, type PdfReportData } from "@/lib/pdfExport";
 
 type Period = "week" | "month" | "year";
 
@@ -446,21 +446,6 @@ const Insights = () => {
     return { spent, calories, exercise, tasks: `${done}/${tasks.length}` };
   }, [data]);
 
-  const handleExport = useCallback(async () => {
-    if (!contentRef.current || exporting) return;
-    setExporting(true);
-    try {
-      await exportElementToPdf({
-        element: contentRef.current,
-        fileName: createPdfFileName("lifeflow-insights", periodLabel(period, offset)),
-      });
-    } catch (err) {
-      console.error("Export failed:", err);
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting, period, offset]);
-
   const insights = useMemo(() => {
     // ── Expenses ──
     const expenses = data.expenses.filter(e => inRange(e.date, start, end));
@@ -556,6 +541,64 @@ const Insights = () => {
       journal: { count: journal.length, moodBreakdown },
     };
   }, [data, start, end, daysInRange]);
+
+  const handleExport = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // Defer insights calculations inside the handleExport so as not to clutter the render loop
+      const tables = [];
+      if (insights.expenses.categoryBreakdown.length > 0) {
+        tables.push({
+          title: "Expenses Breakdown",
+          head: ["Category", "Amount"],
+          body: insights.expenses.categoryBreakdown.map(([cat, amt]) => [cat, `Rs ${amt.toFixed(2)}`]),
+        });
+      }
+      if (insights.food.mealBreakdown.length > 0) {
+        tables.push({
+          title: "Nutrition Summary",
+          head: ["Meal", "Logs"],
+          body: insights.food.mealBreakdown.map(([meal, count]) => [meal.toUpperCase(), count]),
+        });
+      }
+      if (insights.exercise.activityBreakdown.length > 0) {
+        tables.push({
+          title: "Exercise Summary",
+          head: ["Activity", "Duration"],
+          body: insights.exercise.activityBreakdown.map(([activity, mins]) => [activity, `${mins} min`]),
+        });
+      }
+      if (insights.habits.habitStats.length > 0) {
+        tables.push({
+          title: "Habit Tracking",
+          head: ["Habit", "Completion Rate", "Current Streak"],
+          body: insights.habits.habitStats.map((h: any) => [h.name, `${Math.round(h.rate)}%`, `${h.streak} days`]),
+        });
+      }
+
+      const reportData: PdfReportData = {
+        fileName: createPdfFileName("lifeflow-insights", periodLabel(period, offset)),
+        title: "Lifeflow Insights",
+        subtitle: `Dashboard export for ${periodLabel(period, offset)}`,
+        themeColor: [33, 100, 200],
+        summary: [
+          { label: "Total Spent", value: `Total: Rs ${insights.expenses.totalSpent.toFixed(2)}` },
+          { label: "Total Calories", value: `${insights.food.totalCals.toLocaleString()} cal` },
+          { label: "Total Exercise", value: `${insights.exercise.totalMinutes} min` },
+          { label: "Task Completion", value: `${Math.round(insights.tasks.completionRate)}%` },
+          { label: "Journal Entries", value: `${insights.journal.count} entries` },
+        ],
+        tables,
+      };
+
+      await exportReportToPdf(reportData);
+    } catch (err) {
+      console.error("Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, period, offset, insights]);
 
   return (
     <div className="min-h-screen bg-background">

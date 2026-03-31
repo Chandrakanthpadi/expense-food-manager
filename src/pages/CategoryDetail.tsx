@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { createPdfFileName, exportElementToPdf } from "@/lib/pdfExport";
+import { createPdfFileName, exportReportToPdf, type PdfReportData } from "@/lib/pdfExport";
 
 type FilterMode = "month" | "year" | "custom";
 
@@ -91,21 +91,6 @@ const CategoryDetail = () => {
 
   const isCurrentPeriod = filterMode === "month" ? monthOffset === 0 : filterMode === "year" ? yearOffset === 0 : false;
 
-  const handleExport = useCallback(async () => {
-    if (!category || !contentRef.current || exporting) return;
-    setExporting(true);
-    try {
-      await exportElementToPdf({
-        element: contentRef.current,
-        fileName: createPdfFileName("lifeflow", category, label),
-      });
-    } catch (err) {
-      console.error("Category export failed:", err);
-    } finally {
-      setExporting(false);
-    }
-  }, [category, exporting, label]);
-
   const entries = useMemo(() => {
     if (category === "expenses") {
       return data.expenses.filter(e => inRange(e.date, start, end)).sort((a, b) => b.date.localeCompare(a.date));
@@ -164,6 +149,57 @@ const CategoryDetail = () => {
     }
     return { total: "–", count: 0 };
   }, [data, category, start, end]);
+
+  const handleExport = useCallback(async () => {
+    if (!category || exporting) return;
+    setExporting(true);
+    try {
+      let head: string[] = [];
+      let body: (string | number)[][] = [];
+
+      if (category === "expenses") {
+        head = ["Date", "Category", "Amount", "Note"];
+        body = (entries as any[]).map(e => [e.date, e.category, `Rs ${e.amount.toFixed(2)}`, e.note || ""]);
+      } else if (category === "food") {
+        head = ["Date", "Meal", "Items", "Calories"];
+        body = (entries as any[]).map(f => [f.date, f.meal, f.items, f.calories ? `${f.calories} cal` : "–"]);
+      } else if (category === "exercise") {
+        head = ["Date", "Activity", "Duration"];
+        body = (entries as any[]).map(e => [e.date, e.activity, `${e.duration} min`]);
+      } else if (category === "tasks") {
+        head = ["Date", "Task", "Status"];
+        body = (entries as any[]).map(t => [t.date, t.text, t.done ? "Done" : "Pending"]);
+      } else if (category === "journal") {
+        head = ["Date", "Mood", "Entry"];
+        body = (entries as any[]).map(j => [j.date, j.mood, j.content]);
+      } else if (category === "habits") {
+        head = ["Habit", "Completion Timeline", "Total Checks"];
+        body = (entries as any[]).map(h => [h.name, h.completedInRange.length > 0 ? h.completedInRange.join(", ") : "None", `${h.total} checks`]);
+      }
+
+      const reportData: PdfReportData = {
+        fileName: createPdfFileName("lifeflow", category, label),
+        title: `${cat?.label || 'Data'} Export`,
+        subtitle: `Data generated for ${label}`,
+        themeColor: [33, 100, 200],
+        summary: [
+          { label: "Overall Total", value: summary.total },
+          { label: "Recorded Entries", value: summary.count.toString() },
+        ],
+        tables: [{
+          title: "Detailed Records",
+          head,
+          body
+        }]
+      };
+
+      await exportReportToPdf(reportData);
+    } catch (err) {
+      console.error("Category export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [category, exporting, label, summary, entries, cat]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr + "T12:00:00");
