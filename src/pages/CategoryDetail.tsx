@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, DollarSign, UtensilsCrossed, Dumbbell, Target,
-  ListTodo, BookOpen, CalendarIcon, ChevronDown,
+  ListTodo, BookOpen, CalendarIcon, ChevronDown, Download,
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { getISTDateStr } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { createPdfFileName, exportElementToPdf } from "@/lib/pdfExport";
 
 type FilterMode = "month" | "year" | "custom";
 
@@ -75,6 +76,8 @@ const CategoryDetail = () => {
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [pickingStart, setPickingStart] = useState(false);
   const [pickingEnd, setPickingEnd] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const cat = category && CATEGORIES[category] ? CATEGORIES[category] : null;
 
@@ -87,6 +90,21 @@ const CategoryDetail = () => {
   };
 
   const isCurrentPeriod = filterMode === "month" ? monthOffset === 0 : filterMode === "year" ? yearOffset === 0 : false;
+
+  const handleExport = useCallback(async () => {
+    if (!category || !contentRef.current || exporting) return;
+    setExporting(true);
+    try {
+      await exportElementToPdf({
+        element: contentRef.current,
+        fileName: createPdfFileName("lifeflow", category, label),
+      });
+    } catch (err) {
+      console.error("Category export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [category, exporting, label]);
 
   const entries = useMemo(() => {
     if (category === "expenses") {
@@ -195,98 +213,107 @@ const CategoryDetail = () => {
             </span>
             <h1 className="text-xl font-bold tracking-tight leading-none">{cat.label}</h1>
           </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {exporting ? "Exporting…" : "Export PDF"}
+          </button>
         </header>
 
-        {/* Filter mode toggle */}
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-          {(["month", "year", "custom"] as FilterMode[]).map(m => (
-            <button
-              key={m}
-              onClick={() => { setFilterMode(m); setMonthOffset(0); setYearOffset(0); }}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
-                filterMode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {m.charAt(0).toUpperCase() + m.slice(1)}
-            </button>
-          ))}
-        </div>
+        <div ref={contentRef} className="space-y-4 bg-background rounded-xl">
+          {/* Filter mode toggle */}
+          <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+            {(["month", "year", "custom"] as FilterMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => { setFilterMode(m); setMonthOffset(0); setYearOffset(0); }}
+                className={cn(
+                  "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95",
+                  filterMode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
 
-        {/* Date navigation / custom picker */}
-        {filterMode !== "custom" ? (
-          <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
-            <button onClick={() => navigateOffset(-1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
-              <ChevronDown className="w-4 h-4 rotate-90" />
-            </button>
-            <button
-              onClick={() => { setMonthOffset(0); setYearOffset(0); }}
-              className={cn("text-sm font-medium px-3 py-0.5 rounded-md transition-all", isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95")}
-            >
-              {label}
-            </button>
-            <button
-              onClick={() => navigateOffset(1)}
-              disabled={isCurrentPeriod}
-              className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
-            >
-              <ChevronDown className="w-4 h-4 -rotate-90" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Popover open={pickingStart} onOpenChange={setPickingStart}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("flex-1 justify-start text-left text-xs font-normal", !customStart && "text-muted-foreground")}>
-                  <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-                  {customStart ? format(customStart, "MMM d, yyyy") : "Start date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={customStart}
-                  onSelect={(d) => { setCustomStart(d || undefined); setPickingStart(false); }}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <span className="text-xs text-muted-foreground">to</span>
-            <Popover open={pickingEnd} onOpenChange={setPickingEnd}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("flex-1 justify-start text-left text-xs font-normal", !customEnd && "text-muted-foreground")}>
-                  <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-                  {customEnd ? format(customEnd, "MMM d, yyyy") : "End date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={customEnd}
-                  onSelect={(d) => { setCustomEnd(d || undefined); setPickingEnd(false); }}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
+          {/* Date navigation / custom picker */}
+          {filterMode !== "custom" ? (
+            <div className="flex items-center justify-between bg-card rounded-lg border border-border/60 px-2 py-1.5">
+              <button onClick={() => navigateOffset(-1)} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all">
+                <ChevronDown className="w-4 h-4 rotate-90" />
+              </button>
+              <button
+                onClick={() => { setMonthOffset(0); setYearOffset(0); }}
+                className={cn("text-sm font-medium px-3 py-0.5 rounded-md transition-all", isCurrentPeriod ? "text-foreground" : "text-primary hover:bg-primary/10 active:scale-95")}
+              >
+                {label}
+              </button>
+              <button
+                onClick={() => navigateOffset(1)}
+                disabled={isCurrentPeriod}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ChevronDown className="w-4 h-4 -rotate-90" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Popover open={pickingStart} onOpenChange={setPickingStart}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("flex-1 justify-start text-left text-xs font-normal", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+                    {customStart ? format(customStart, "MMM d, yyyy") : "Start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStart}
+                    onSelect={(d) => { setCustomStart(d || undefined); setPickingStart(false); }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-xs text-muted-foreground">to</span>
+              <Popover open={pickingEnd} onOpenChange={setPickingEnd}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("flex-1 justify-start text-left text-xs font-normal", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+                    {customEnd ? format(customEnd, "MMM d, yyyy") : "End date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={customEnd}
+                    onSelect={(d) => { setCustomEnd(d || undefined); setPickingEnd(false); }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
-        {/* Summary card */}
-        <div className="bg-card rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</p>
-            <p className="text-lg font-bold tabular-nums">{summary.total}</p>
+          {/* Summary card */}
+          <div className="bg-card rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total</p>
+              <p className="text-lg font-bold tabular-nums">{summary.total}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entries</p>
+              <p className="text-lg font-bold tabular-nums">{summary.count}</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entries</p>
-            <p className="text-lg font-bold tabular-nums">{summary.count}</p>
-          </div>
-        </div>
 
-        {/* Entries list grouped by day */}
-        <div className="space-y-4">
+          {/* Entries list grouped by day */}
+          <div className="space-y-4">
           {category === "expenses" && groupByDate(entries as typeof data.expenses).map(group => (
             <div key={group.date} className="space-y-1">
               <div className="flex items-center justify-between px-1 pt-1">
@@ -394,6 +421,7 @@ const CategoryDetail = () => {
           {(Array.isArray(entries) && entries.length === 0) && (
             <div className="text-center py-12 text-muted-foreground text-sm">No data for this period</div>
           )}
+          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { cn, getISTDateStr } from "@/lib/utils";
+import { createPdfFileName, exportElementToPdf } from "@/lib/pdfExport";
 
 type Period = "week" | "month" | "year";
 
@@ -449,17 +450,10 @@ const Insights = () => {
     if (!contentRef.current || exporting) return;
     setExporting(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      await exportElementToPdf({
+        element: contentRef.current,
+        fileName: createPdfFileName("lifeflow-insights", periodLabel(period, offset)),
       });
-      const link = document.createElement("a");
-      link.download = `lifeflow-insights-${periodLabel(period, offset).replace(/\s+/g, "-")}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
@@ -583,7 +577,7 @@ const Insights = () => {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted rounded-md px-3 py-2 active:scale-95 transition-all disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
-            {exporting ? "Exporting…" : "Export"}
+            {exporting ? "Exporting…" : "Export PDF"}
           </button>
         </header>
 
