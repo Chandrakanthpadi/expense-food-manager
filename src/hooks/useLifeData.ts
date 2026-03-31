@@ -15,6 +15,7 @@ export type {
   FoodEntry,
   Habit,
   JournalEntry,
+  LifeData,
   MealCheck,
   Task,
 } from "@/lib/lifeDataTypes";

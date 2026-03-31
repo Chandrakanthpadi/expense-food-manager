@@ -90,7 +90,7 @@ export async function replaceLifeDataInDb(value: LifeData): Promise<void> {
     const store = transaction.objectStore(storeName);
     store.clear();
 
-    for (const item of nextData[storeName] as Array<Record<string, unknown>>) {
+    for (const item of nextData[storeName] as Array<LifeData[typeof storeName][number]>) {
       store.put(item);
     }
   }

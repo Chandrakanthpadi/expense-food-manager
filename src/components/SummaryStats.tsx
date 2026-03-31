@@ -86,10 +86,12 @@ export function SummaryStats({ data, selectedDate }: Props) {
     const expenses = data.expenses.filter(e => inRange(e.date, start, end));
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
     const topCategory = expenses.length
-      ? Object.entries(expenses.reduce<Record<string, number>>((acc, e) => {
-          acc[e.category] = (acc[e.category] || 0) + e.amount;
-          return acc;
-        }, {})).sort((a, b) => b[1] - a[1])[0]
+      ? (Object.entries(
+          expenses.reduce<Record<string, number>>((acc, e) => {
+            acc[e.category] = (acc[e.category] || 0) + e.amount;
+            return acc;
+          }, {}),
+        ) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0]
       : null;
 
     const food = data.food.filter(f => inRange(f.date, start, end));
