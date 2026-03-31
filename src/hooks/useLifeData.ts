@@ -1,183 +1,204 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getISTDateStr } from "@/lib/utils";
+import {
+  clearLifeDataInDb,
+  deleteCollectionItem,
+  loadLifeDataFromDb,
+  putCollectionItem,
+  replaceLifeDataInDb,
+} from "@/lib/lifeDataDb";
+import { createEmptyLifeData, mergeLifeData, type LifeData } from "@/lib/lifeDataTypes";
 
-export interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  note: string;
-  date: string;
-}
-
-export interface FoodEntry {
-  id: string;
-  meal: string;
-  items: string;
-  calories?: number;
-  date: string;
-}
-
-export interface MealCheck {
-  date: string;
-  breakfast: boolean;
-  lunch: boolean;
-  dinner: boolean;
-  snack: boolean;
-}
-
-export interface ExerciseEntry {
-  id: string;
-  activity: string;
-  duration: number;
-  date: string;
-}
-
-export interface Habit {
-  id: string;
-  name: string;
-  completedDates: string[];
-}
-
-export interface Task {
-  id: string;
-  text: string;
-  done: boolean;
-  date: string;
-}
-
-export interface JournalEntry {
-  id: string;
-  content: string;
-  mood: string;
-  date: string;
-}
-
-export interface LifeData {
-  expenses: Expense[];
-  food: FoodEntry[];
-  mealChecks: MealCheck[];
-  exercise: ExerciseEntry[];
-  habits: Habit[];
-  tasks: Task[];
-  journal: JournalEntry[];
-}
-
-const STORAGE_KEY = "lifeflow-data";
-
-const defaultData: LifeData = {
-  expenses: [],
-  food: [],
-  mealChecks: [],
-  exercise: [],
-  habits: [],
-  tasks: [],
-  journal: [],
-};
-
-function load(): LifeData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...defaultData, ...JSON.parse(raw) } : defaultData;
-  } catch {
-    return defaultData;
-  }
-}
+export type {
+  Expense,
+  ExerciseEntry,
+  FoodEntry,
+  Habit,
+  JournalEntry,
+  LifeData,
+  MealCheck,
+  Task,
+} from "@/lib/lifeDataTypes";
 
 export function useLifeData() {
-  const [data, setData] = useState<LifeData>(load);
+  const [data, setData] = useState<LifeData>(() => createEmptyLifeData());
+  const dataRef = useRef<LifeData>(createEmptyLifeData());
+  const initPromiseRef = useRef<Promise<LifeData> | null>(null);
+
+  const commitData = useCallback((next: LifeData) => {
+    dataRef.current = next;
+    setData(next);
+    return next;
+  }, []);
+
+  const ensureLoaded = useCallback(async () => {
+    if (!initPromiseRef.current) {
+      initPromiseRef.current = loadLifeDataFromDb().then((loaded) => {
+        commitData(loaded);
+        return loaded;
+      });
+    }
+
+    return initPromiseRef.current;
+  }, [commitData]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    void ensureLoaded();
+  }, [ensureLoaded]);
 
   const uid = () => crypto.randomUUID();
   const today = () => getISTDateStr();
 
   const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
-    setData(d => ({ ...d, expenses: [...d.expenses, { id: uid(), amount, category, note, date: date || today() }] }));
-  }, []);
+    const entry = { id: uid(), amount, category, note, date: date || today() };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, expenses: [...current.expenses, entry] });
+      return putCollectionItem("expenses", entry);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeExpense = useCallback((id: string) => {
-    setData(d => ({ ...d, expenses: d.expenses.filter(e => e.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, expenses: current.expenses.filter((expense) => expense.id !== id) });
+      return deleteCollectionItem("expenses", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
-    setData(d => ({ ...d, food: [...d.food, { id: uid(), meal, items, calories, date: date || today() }] }));
-  }, []);
+    const entry = { id: uid(), meal, items, calories, date: date || today() };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, food: [...current.food, entry] });
+      return putCollectionItem("food", entry);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeFood = useCallback((id: string) => {
-    setData(d => ({ ...d, food: d.food.filter(e => e.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, food: current.food.filter((entry) => entry.id !== id) });
+      return deleteCollectionItem("food", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
-    setData(d => {
-      const existing = d.mealChecks.find(m => m.date === date);
-      if (existing) {
-        return {
-          ...d,
-          mealChecks: d.mealChecks.map(m =>
-            m.date === date ? { ...m, [meal]: !m[meal] } : m
-          ),
-        };
-      }
-      return {
-        ...d,
-        mealChecks: [...d.mealChecks, { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true }],
-      };
+    void ensureLoaded().then((current) => {
+      const existing = current.mealChecks.find((item) => item.date === date);
+      const nextMealCheck = existing
+        ? { ...existing, [meal]: !existing[meal] }
+        : { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true };
+
+      commitData({
+        ...current,
+        mealChecks: existing
+          ? current.mealChecks.map((item) => (item.date === date ? nextMealCheck : item))
+          : [...current.mealChecks, nextMealCheck],
+      });
+
+      return putCollectionItem("mealChecks", nextMealCheck);
     });
-  }, []);
+  }, [commitData, ensureLoaded]);
 
   const addExercise = useCallback((activity: string, duration: number, date?: string) => {
-    setData(d => ({ ...d, exercise: [...d.exercise, { id: uid(), activity, duration, date: date || today() }] }));
-  }, []);
+    const entry = { id: uid(), activity, duration, date: date || today() };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, exercise: [...current.exercise, entry] });
+      return putCollectionItem("exercise", entry);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeExercise = useCallback((id: string) => {
-    setData(d => ({ ...d, exercise: d.exercise.filter(e => e.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, exercise: current.exercise.filter((entry) => entry.id !== id) });
+      return deleteCollectionItem("exercise", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const addHabit = useCallback((name: string) => {
-    setData(d => ({ ...d, habits: [...d.habits, { id: uid(), name, completedDates: [] }] }));
-  }, []);
+    const habit = { id: uid(), name, completedDates: [] };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, habits: [...current.habits, habit] });
+      return putCollectionItem("habits", habit);
+    });
+  }, [commitData, ensureLoaded]);
 
   const toggleHabit = useCallback((id: string, date: string) => {
-    setData(d => ({
-      ...d,
-      habits: d.habits.map(h =>
-        h.id === id
-          ? { ...h, completedDates: h.completedDates.includes(date) ? h.completedDates.filter(d => d !== date) : [...h.completedDates, date] }
-          : h
-      ),
-    }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      const habit = current.habits.find((item) => item.id === id);
+      if (!habit) return;
+
+      const nextHabit = {
+        ...habit,
+        completedDates: habit.completedDates.includes(date)
+          ? habit.completedDates.filter((completedDate) => completedDate !== date)
+          : [...habit.completedDates, date],
+      };
+
+      commitData({
+        ...current,
+        habits: current.habits.map((item) => (item.id === id ? nextHabit : item)),
+      });
+
+      return putCollectionItem("habits", nextHabit);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeHabit = useCallback((id: string) => {
-    setData(d => ({ ...d, habits: d.habits.filter(h => h.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, habits: current.habits.filter((habit) => habit.id !== id) });
+      return deleteCollectionItem("habits", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const addTask = useCallback((text: string, date?: string) => {
-    setData(d => ({ ...d, tasks: [...d.tasks, { id: uid(), text, done: false, date: date || today() }] }));
-  }, []);
+    const task = { id: uid(), text, done: false, date: date || today() };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, tasks: [...current.tasks, task] });
+      return putCollectionItem("tasks", task);
+    });
+  }, [commitData, ensureLoaded]);
 
   const toggleTask = useCallback((id: string) => {
-    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      const task = current.tasks.find((item) => item.id === id);
+      if (!task) return;
+
+      const nextTask = { ...task, done: !task.done };
+      commitData({
+        ...current,
+        tasks: current.tasks.map((item) => (item.id === id ? nextTask : item)),
+      });
+
+      return putCollectionItem("tasks", nextTask);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeTask = useCallback((id: string) => {
-    setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, tasks: current.tasks.filter((task) => task.id !== id) });
+      return deleteCollectionItem("tasks", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const addJournal = useCallback((content: string, mood: string, date?: string) => {
-    setData(d => ({ ...d, journal: [...d.journal, { id: uid(), content, mood, date: date || today() }] }));
-  }, []);
+    const entry = { id: uid(), content, mood, date: date || today() };
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, journal: [...current.journal, entry] });
+      return putCollectionItem("journal", entry);
+    });
+  }, [commitData, ensureLoaded]);
 
   const removeJournal = useCallback((id: string) => {
-    setData(d => ({ ...d, journal: d.journal.filter(j => j.id !== id) }));
-  }, []);
+    void ensureLoaded().then((current) => {
+      commitData({ ...current, journal: current.journal.filter((entry) => entry.id !== id) });
+      return deleteCollectionItem("journal", id);
+    });
+  }, [commitData, ensureLoaded]);
 
   const resetData = useCallback(() => {
-    setData(defaultData);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    const emptyData = createEmptyLifeData();
+    commitData(emptyData);
+    void clearLifeDataInDb();
+    localStorage.removeItem("lifeflow-data");
+  }, [commitData]);
 
   const exportData = useCallback(() => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -191,18 +212,19 @@ export function useLifeData() {
 
   const importData = useCallback((file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const imported = JSON.parse(e.target?.result as string);
-        const merged: LifeData = { ...defaultData, ...imported };
-        setData(merged);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        const merged = mergeLifeData(imported);
+        commitData(merged);
+        await replaceLifeDataInDb(merged);
+        localStorage.removeItem("lifeflow-data");
       } catch {
         alert("Invalid file. Please select a valid Lifeflow export JSON.");
       }
     };
     reader.readAsText(file);
-  }, []);
+  }, [commitData]);
 
   return {
     data,
