@@ -51,14 +51,16 @@ export function useLifeData() {
 
   const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
     const entry = { id: uid(), amount, category, note, date: date || today() };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, expenses: [...current.expenses, entry] });
       return putCollectionItem("expenses", entry);
     });
   }, [commitData, ensureLoaded]);
 
   const removeExpense = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, expenses: current.expenses.filter((expense) => expense.id !== id) });
       return deleteCollectionItem("expenses", id);
     });
@@ -66,21 +68,24 @@ export function useLifeData() {
 
   const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
     const entry = { id: uid(), meal, items, calories, date: date || today() };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, food: [...current.food, entry] });
       return putCollectionItem("food", entry);
     });
   }, [commitData, ensureLoaded]);
 
   const removeFood = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, food: current.food.filter((entry) => entry.id !== id) });
       return deleteCollectionItem("food", id);
     });
   }, [commitData, ensureLoaded]);
 
   const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       const existing = current.mealChecks.find((item) => item.date === date);
       const nextMealCheck = existing
         ? { ...existing, [meal]: !existing[meal] }
@@ -99,14 +104,16 @@ export function useLifeData() {
 
   const addExercise = useCallback((activity: string, duration: number, date?: string) => {
     const entry = { id: uid(), activity, duration, date: date || today() };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, exercise: [...current.exercise, entry] });
       return putCollectionItem("exercise", entry);
     });
   }, [commitData, ensureLoaded]);
 
   const removeExercise = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, exercise: current.exercise.filter((entry) => entry.id !== id) });
       return deleteCollectionItem("exercise", id);
     });
@@ -114,14 +121,16 @@ export function useLifeData() {
 
   const addHabit = useCallback((name: string) => {
     const habit = { id: uid(), name, completedDates: [] };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, habits: [...current.habits, habit] });
       return putCollectionItem("habits", habit);
     });
   }, [commitData, ensureLoaded]);
 
   const toggleHabit = useCallback((id: string, date: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       const habit = current.habits.find((item) => item.id === id);
       if (!habit) return;
 
@@ -142,7 +151,8 @@ export function useLifeData() {
   }, [commitData, ensureLoaded]);
 
   const removeHabit = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, habits: current.habits.filter((habit) => habit.id !== id) });
       return deleteCollectionItem("habits", id);
     });
@@ -150,14 +160,16 @@ export function useLifeData() {
 
   const addTask = useCallback((text: string, date?: string) => {
     const task = { id: uid(), text, done: false, date: date || today() };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, tasks: [...current.tasks, task] });
       return putCollectionItem("tasks", task);
     });
   }, [commitData, ensureLoaded]);
 
   const toggleTask = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       const task = current.tasks.find((item) => item.id === id);
       if (!task) return;
 
@@ -172,7 +184,8 @@ export function useLifeData() {
   }, [commitData, ensureLoaded]);
 
   const removeTask = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, tasks: current.tasks.filter((task) => task.id !== id) });
       return deleteCollectionItem("tasks", id);
     });
@@ -180,14 +193,16 @@ export function useLifeData() {
 
   const addJournal = useCallback((content: string, mood: string, date?: string) => {
     const entry = { id: uid(), content, mood, date: date || today() };
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, journal: [...current.journal, entry] });
       return putCollectionItem("journal", entry);
     });
   }, [commitData, ensureLoaded]);
 
   const removeJournal = useCallback((id: string) => {
-    void ensureLoaded().then((current) => {
+    void ensureLoaded().then(() => {
+      const current = dataRef.current;
       commitData({ ...current, journal: current.journal.filter((entry) => entry.id !== id) });
       return deleteCollectionItem("journal", id);
     });
