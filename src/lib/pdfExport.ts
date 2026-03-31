@@ -92,6 +92,7 @@ export async function exportReportToPdf(data: PdfReportData) {
       theme: "striped",
       headStyles: { fillColor: primaryColor as [number, number, number] },
       margin: { left: 14, right: 14, top: 20, bottom: 20 },
+      styles: { cellPadding: 4 },
     });
     
     currentY = (doc as any).lastAutoTable.finalY + 12;
