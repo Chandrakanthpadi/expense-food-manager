@@ -53,7 +53,7 @@ export function useLifeData() {
     const entry = { id: uid(), amount, category, note, date: date || today() };
     void ensureLoaded().then(() => {
       const current = dataRef.current;
-      commitData({ ...current, expenses: [...current.expenses, entry] });
+      commitData({ ...current, expenses: [ entry , ...current.expenses] });
       return putCollectionItem("expenses", entry);
     });
   }, [commitData, ensureLoaded]);
@@ -70,7 +70,7 @@ export function useLifeData() {
     const entry = { id: uid(), meal, items, calories, date: date || today() };
     void ensureLoaded().then(() => {
       const current = dataRef.current;
-      commitData({ ...current, food: [...current.food, entry] });
+      commitData({ ...current, food: [entry, ...current.food] });
       return putCollectionItem("food", entry);
     });
   }, [commitData, ensureLoaded]);
@@ -95,7 +95,7 @@ export function useLifeData() {
         ...current,
         mealChecks: existing
           ? current.mealChecks.map((item) => (item.date === date ? nextMealCheck : item))
-          : [...current.mealChecks, nextMealCheck],
+          : [nextMealCheck, ...current.mealChecks],
       });
 
       return putCollectionItem("mealChecks", nextMealCheck);
@@ -106,7 +106,7 @@ export function useLifeData() {
     const entry = { id: uid(), activity, duration, date: date || today() };
     void ensureLoaded().then(() => {
       const current = dataRef.current;
-      commitData({ ...current, exercise: [...current.exercise, entry] });
+      commitData({ ...current, exercise: [entry , ...current.exercise] });
       return putCollectionItem("exercise", entry);
     });
   }, [commitData, ensureLoaded]);
@@ -123,7 +123,7 @@ export function useLifeData() {
     const habit = { id: uid(), name, completedDates: [] };
     void ensureLoaded().then(() => {
       const current = dataRef.current;
-      commitData({ ...current, habits: [...current.habits, habit] });
+      commitData({ ...current, habits: [ habit, ...current.habits] });
       return putCollectionItem("habits", habit);
     });
   }, [commitData, ensureLoaded]);
@@ -195,7 +195,7 @@ export function useLifeData() {
     const entry = { id: uid(), content, mood, date: date || today() };
     void ensureLoaded().then(() => {
       const current = dataRef.current;
-      commitData({ ...current, journal: [...current.journal, entry] });
+      commitData({ ...current, journal: [entry , ...current.journal] });
       return putCollectionItem("journal", entry);
     });
   }, [commitData, ensureLoaded]);
