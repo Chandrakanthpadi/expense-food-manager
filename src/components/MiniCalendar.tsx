@@ -12,9 +12,9 @@ export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
   const todayStr = getISTDateStr();
 
   const quickDates = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
+    return Array.from({ length: 5 }, (_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (5 - i));
+      d.setDate(d.getDate() - (4 - i));
       return getISTDateStr(d);
     });
   }, []);
@@ -59,16 +59,16 @@ export function MiniCalendar({ selectedDate, onSelectDate }: Props) {
                   setShowFullGrid(false);
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all duration-200 active:scale-95",
+                  "flex flex-col items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 active:scale-95",
                   isSelected
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 font-bold scale-105 z-10"
                     : "hover:bg-muted text-muted-foreground"
                 )}
               >
-                <span className={cn("text-[9px] uppercase font-bold mb-1", isSelected ? "text-primary-foreground/70" : "text-muted-foreground/60")}>
+                <span className={cn("text-[10px] uppercase font-bold mb-1", isSelected ? "text-primary-foreground/70" : "text-muted-foreground/60")}>
                   {dayName}
                 </span>
-                <span className="text-sm tabular-nums">
+                <span className="text-xs tabular-nums">
                   {dayNum}
                 </span>
                 {isToday && !isSelected && <div className="w-1 h-1 bg-primary rounded-full mt-1" />}
