@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Upload, RotateCcw } from "lucide-react";
+import { ArrowLeft, Download, Upload, RotateCcw, LogOut } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
+import { useAuth } from "@/hooks/useAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ import {
 const Settings = () => {
   const navigate = useNavigate();
   const life = useLifeData();
+  const { signOut, user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -112,9 +114,28 @@ const Settings = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+        </div>
+
+        {/* Account */}
+        <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/40">
+            <h2 className="text-sm font-semibold">Account</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
           </div>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-destructive/5 active:scale-[0.99] transition-all"
+          >
+            <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-destructive/10 text-destructive">
+              <LogOut className="w-4.5 h-4.5" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">Sign Out</p>
+            </div>
+          </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };

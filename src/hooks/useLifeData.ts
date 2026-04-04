@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getISTDateStr } from "@/lib/utils";
-import {
-  clearLifeDataInDb,
-  deleteCollectionItem,
-  loadLifeDataFromDb,
-  putCollectionItem,
-  replaceLifeDataInDb,
-} from "@/lib/lifeDataDb";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { createEmptyLifeData, mergeLifeData, type LifeData } from "@/lib/lifeDataTypes";
 
 export type {
@@ -21,200 +16,212 @@ export type {
 } from "@/lib/lifeDataTypes";
 
 export function useLifeData() {
+  const { user } = useAuth();
   const [data, setData] = useState<LifeData>(() => createEmptyLifeData());
   const dataRef = useRef<LifeData>(createEmptyLifeData());
-  const initPromiseRef = useRef<Promise<LifeData> | null>(null);
+  const loadedRef = useRef(false);
 
   const commitData = useCallback((next: LifeData) => {
     dataRef.current = next;
     setData(next);
-    return next;
   }, []);
 
-  const ensureLoaded = useCallback(async () => {
-    if (!initPromiseRef.current) {
-      initPromiseRef.current = loadLifeDataFromDb().then((loaded) => {
-        commitData(loaded);
-        return loaded;
-      });
+  // Load all data from Supabase
+  useEffect(() => {
+    if (!user) {
+      commitData(createEmptyLifeData());
+      loadedRef.current = false;
+      return;
     }
 
-    return initPromiseRef.current;
-  }, [commitData]);
+    const load = async () => {
+      const [expenses, food, mealChecks, exercise, habits, tasks, journal] = await Promise.all([
+        supabase.from("expenses").select("id, amount, category, note, date").order("created_at", { ascending: false }),
+        supabase.from("food").select("id, meal, items, calories, date").order("created_at", { ascending: false }),
+        supabase.from("meal_checks").select("id, date, breakfast, lunch, dinner, snack"),
+        supabase.from("exercise").select("id, activity, duration, date").order("created_at", { ascending: false }),
+        supabase.from("habits").select("id, name, completed_dates").order("created_at", { ascending: false }),
+        supabase.from("tasks").select("id, text, done, date").order("created_at", { ascending: true }),
+        supabase.from("journal").select("id, content, mood, date").order("created_at", { ascending: false }),
+      ]);
 
-  useEffect(() => {
-    void ensureLoaded();
-  }, [ensureLoaded]);
+      commitData(mergeLifeData({
+        expenses: expenses.data ?? [],
+        food: food.data ?? [],
+        mealChecks: (mealChecks.data ?? []).map(m => ({
+          date: m.date,
+          breakfast: m.breakfast,
+          lunch: m.lunch,
+          dinner: m.dinner,
+          snack: m.snack,
+        })),
+        exercise: exercise.data ?? [],
+        habits: (habits.data ?? []).map(h => ({
+          id: h.id,
+          name: h.name,
+          completedDates: h.completed_dates ?? [],
+        })),
+        tasks: tasks.data ?? [],
+        journal: journal.data ?? [],
+      }));
+      loadedRef.current = true;
+    };
+
+    load();
+  }, [user, commitData]);
 
   const uid = () => crypto.randomUUID();
   const today = () => getISTDateStr();
 
+  // ── Expenses ──
   const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
+    if (!user) return;
     const entry = { id: uid(), amount, category, note, date: date || today() };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, expenses: [ entry , ...current.expenses] });
-      return putCollectionItem("expenses", entry);
-    });
-  }, [commitData, ensureLoaded]);
+    const current = dataRef.current;
+    commitData({ ...current, expenses: [entry, ...current.expenses] });
+    supabase.from("expenses").insert({ ...entry, user_id: user.id }).then();
+  }, [user, commitData]);
 
   const removeExpense = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, expenses: current.expenses.filter((expense) => expense.id !== id) });
-      return deleteCollectionItem("expenses", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
-    const entry = { id: uid(), meal, items, calories, date: date || today() };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, food: [entry, ...current.food] });
-      return putCollectionItem("food", entry);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const removeFood = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, food: current.food.filter((entry) => entry.id !== id) });
-      return deleteCollectionItem("food", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      const existing = current.mealChecks.find((item) => item.date === date);
-      const nextMealCheck = existing
-        ? { ...existing, [meal]: !existing[meal] }
-        : { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true };
-
-      commitData({
-        ...current,
-        mealChecks: existing
-          ? current.mealChecks.map((item) => (item.date === date ? nextMealCheck : item))
-          : [nextMealCheck, ...current.mealChecks],
-      });
-
-      return putCollectionItem("mealChecks", nextMealCheck);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const addExercise = useCallback((activity: string, duration: number, date?: string) => {
-    const entry = { id: uid(), activity, duration, date: date || today() };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, exercise: [entry , ...current.exercise] });
-      return putCollectionItem("exercise", entry);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const removeExercise = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, exercise: current.exercise.filter((entry) => entry.id !== id) });
-      return deleteCollectionItem("exercise", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const addHabit = useCallback((name: string) => {
-    const habit = { id: uid(), name, completedDates: [] };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, habits: [ habit, ...current.habits] });
-      return putCollectionItem("habits", habit);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const toggleHabit = useCallback((id: string, date: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      const habit = current.habits.find((item) => item.id === id);
-      if (!habit) return;
-
-      const nextHabit = {
-        ...habit,
-        completedDates: habit.completedDates.includes(date)
-          ? habit.completedDates.filter((completedDate) => completedDate !== date)
-          : [...habit.completedDates, date],
-      };
-
-      commitData({
-        ...current,
-        habits: current.habits.map((item) => (item.id === id ? nextHabit : item)),
-      });
-
-      return putCollectionItem("habits", nextHabit);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const removeHabit = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, habits: current.habits.filter((habit) => habit.id !== id) });
-      return deleteCollectionItem("habits", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const addTask = useCallback((text: string, date?: string) => {
-    const task = { id: uid(), text, done: false, date: date || today() };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, tasks: [...current.tasks, task] });
-      return putCollectionItem("tasks", task);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const toggleTask = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      const task = current.tasks.find((item) => item.id === id);
-      if (!task) return;
-
-      const nextTask = { ...task, done: !task.done };
-      commitData({
-        ...current,
-        tasks: current.tasks.map((item) => (item.id === id ? nextTask : item)),
-      });
-
-      return putCollectionItem("tasks", nextTask);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const removeTask = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, tasks: current.tasks.filter((task) => task.id !== id) });
-      return deleteCollectionItem("tasks", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const addJournal = useCallback((content: string, mood: string, date?: string) => {
-    const entry = { id: uid(), content, mood, date: date || today() };
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, journal: [entry , ...current.journal] });
-      return putCollectionItem("journal", entry);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const removeJournal = useCallback((id: string) => {
-    void ensureLoaded().then(() => {
-      const current = dataRef.current;
-      commitData({ ...current, journal: current.journal.filter((entry) => entry.id !== id) });
-      return deleteCollectionItem("journal", id);
-    });
-  }, [commitData, ensureLoaded]);
-
-  const resetData = useCallback(() => {
-    const emptyData = createEmptyLifeData();
-    commitData(emptyData);
-    void clearLifeDataInDb();
-    localStorage.removeItem("lifeflow-data");
+    const current = dataRef.current;
+    commitData({ ...current, expenses: current.expenses.filter(e => e.id !== id) });
+    supabase.from("expenses").delete().eq("id", id).then();
   }, [commitData]);
 
+  // ── Food ──
+  const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
+    if (!user) return;
+    const entry = { id: uid(), meal, items, calories: calories ?? null, date: date || today() };
+    const current = dataRef.current;
+    commitData({ ...current, food: [entry, ...current.food] });
+    supabase.from("food").insert({ ...entry, user_id: user.id }).then();
+  }, [user, commitData]);
+
+  const removeFood = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, food: current.food.filter(e => e.id !== id) });
+    supabase.from("food").delete().eq("id", id).then();
+  }, [commitData]);
+
+  // ── Meal Checks ──
+  const toggleMealCheck = useCallback((date: string, meal: "breakfast" | "lunch" | "dinner" | "snack") => {
+    if (!user) return;
+    const current = dataRef.current;
+    const existing = current.mealChecks.find(m => m.date === date);
+    const next = existing
+      ? { ...existing, [meal]: !existing[meal] }
+      : { date, breakfast: false, lunch: false, dinner: false, snack: false, [meal]: true };
+
+    commitData({
+      ...current,
+      mealChecks: existing
+        ? current.mealChecks.map(m => m.date === date ? next : m)
+        : [next, ...current.mealChecks],
+    });
+
+    supabase.from("meal_checks").upsert({
+      user_id: user.id,
+      date: next.date,
+      breakfast: next.breakfast,
+      lunch: next.lunch,
+      dinner: next.dinner,
+      snack: next.snack,
+    }, { onConflict: "user_id,date" }).then();
+  }, [user, commitData]);
+
+  // ── Exercise ──
+  const addExercise = useCallback((activity: string, duration: number, date?: string) => {
+    if (!user) return;
+    const entry = { id: uid(), activity, duration, date: date || today() };
+    const current = dataRef.current;
+    commitData({ ...current, exercise: [entry, ...current.exercise] });
+    supabase.from("exercise").insert({ ...entry, user_id: user.id }).then();
+  }, [user, commitData]);
+
+  const removeExercise = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, exercise: current.exercise.filter(e => e.id !== id) });
+    supabase.from("exercise").delete().eq("id", id).then();
+  }, [commitData]);
+
+  // ── Habits ──
+  const addHabit = useCallback((name: string) => {
+    if (!user) return;
+    const habit = { id: uid(), name, completedDates: [] as string[] };
+    const current = dataRef.current;
+    commitData({ ...current, habits: [habit, ...current.habits] });
+    supabase.from("habits").insert({ id: habit.id, name, completed_dates: [], user_id: user.id }).then();
+  }, [user, commitData]);
+
+  const toggleHabit = useCallback((id: string, date: string) => {
+    const current = dataRef.current;
+    const habit = current.habits.find(h => h.id === id);
+    if (!habit) return;
+
+    const nextDates = habit.completedDates.includes(date)
+      ? habit.completedDates.filter(d => d !== date)
+      : [...habit.completedDates, date];
+
+    const nextHabit = { ...habit, completedDates: nextDates };
+    commitData({
+      ...current,
+      habits: current.habits.map(h => h.id === id ? nextHabit : h),
+    });
+
+    supabase.from("habits").update({ completed_dates: nextDates }).eq("id", id).then();
+  }, [commitData]);
+
+  const removeHabit = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, habits: current.habits.filter(h => h.id !== id) });
+    supabase.from("habits").delete().eq("id", id).then();
+  }, [commitData]);
+
+  // ── Tasks ──
+  const addTask = useCallback((text: string, date?: string) => {
+    if (!user) return;
+    const task = { id: uid(), text, done: false, date: date || today() };
+    const current = dataRef.current;
+    commitData({ ...current, tasks: [...current.tasks, task] });
+    supabase.from("tasks").insert({ ...task, user_id: user.id }).then();
+  }, [user, commitData]);
+
+  const toggleTask = useCallback((id: string) => {
+    const current = dataRef.current;
+    const task = current.tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const nextTask = { ...task, done: !task.done };
+    commitData({
+      ...current,
+      tasks: current.tasks.map(t => t.id === id ? nextTask : t),
+    });
+
+    supabase.from("tasks").update({ done: nextTask.done }).eq("id", id).then();
+  }, [commitData]);
+
+  const removeTask = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, tasks: current.tasks.filter(t => t.id !== id) });
+    supabase.from("tasks").delete().eq("id", id).then();
+  }, [commitData]);
+
+  // ── Journal ──
+  const addJournal = useCallback((content: string, mood: string, date?: string) => {
+    if (!user) return;
+    const entry = { id: uid(), content, mood, date: date || today() };
+    const current = dataRef.current;
+    commitData({ ...current, journal: [entry, ...current.journal] });
+    supabase.from("journal").insert({ ...entry, user_id: user.id }).then();
+  }, [user, commitData]);
+
+  const removeJournal = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, journal: current.journal.filter(e => e.id !== id) });
+    supabase.from("journal").delete().eq("id", id).then();
+  }, [commitData]);
+
+  // ── Export / Import / Reset ──
   const exportData = useCallback(() => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -225,21 +232,55 @@ export function useLifeData() {
     URL.revokeObjectURL(url);
   }, [data]);
 
-  const importData = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const imported = JSON.parse(e.target?.result as string);
-        const merged = mergeLifeData(imported);
-        commitData(merged);
-        await replaceLifeDataInDb(merged);
-        localStorage.removeItem("lifeflow-data");
-      } catch {
-        alert("Invalid file. Please select a valid Lifeflow export JSON.");
-      }
-    };
-    reader.readAsText(file);
-  }, [commitData]);
+  const importData = useCallback(async (file: File) => {
+    if (!user) return;
+    const text = await file.text();
+    try {
+      const imported = JSON.parse(text) as Partial<LifeData>;
+      const merged = mergeLifeData(imported);
+
+      // Delete all existing data then insert imported
+      await Promise.all([
+        supabase.from("expenses").delete().eq("user_id", user.id),
+        supabase.from("food").delete().eq("user_id", user.id),
+        supabase.from("meal_checks").delete().eq("user_id", user.id),
+        supabase.from("exercise").delete().eq("user_id", user.id),
+        supabase.from("habits").delete().eq("user_id", user.id),
+        supabase.from("tasks").delete().eq("user_id", user.id),
+        supabase.from("journal").delete().eq("user_id", user.id),
+      ]);
+
+      // Insert in batches
+      const userId = user.id;
+      await Promise.all([
+        merged.expenses.length > 0 && supabase.from("expenses").insert(merged.expenses.map(e => ({ ...e, user_id: userId }))),
+        merged.food.length > 0 && supabase.from("food").insert(merged.food.map(f => ({ ...f, calories: f.calories ?? null, user_id: userId }))),
+        merged.mealChecks.length > 0 && supabase.from("meal_checks").insert(merged.mealChecks.map(m => ({ user_id: userId, date: m.date, breakfast: m.breakfast, lunch: m.lunch, dinner: m.dinner, snack: m.snack }))),
+        merged.exercise.length > 0 && supabase.from("exercise").insert(merged.exercise.map(e => ({ ...e, user_id: userId }))),
+        merged.habits.length > 0 && supabase.from("habits").insert(merged.habits.map(h => ({ id: h.id, name: h.name, completed_dates: h.completedDates, user_id: userId }))),
+        merged.tasks.length > 0 && supabase.from("tasks").insert(merged.tasks.map(t => ({ ...t, user_id: userId }))),
+        merged.journal.length > 0 && supabase.from("journal").insert(merged.journal.map(j => ({ ...j, user_id: userId }))),
+      ]);
+
+      commitData(merged);
+    } catch {
+      alert("Invalid file. Please select a valid LifeFlow export JSON.");
+    }
+  }, [user, commitData]);
+
+  const resetData = useCallback(async () => {
+    if (!user) return;
+    commitData(createEmptyLifeData());
+    await Promise.all([
+      supabase.from("expenses").delete().eq("user_id", user.id),
+      supabase.from("food").delete().eq("user_id", user.id),
+      supabase.from("meal_checks").delete().eq("user_id", user.id),
+      supabase.from("exercise").delete().eq("user_id", user.id),
+      supabase.from("habits").delete().eq("user_id", user.id),
+      supabase.from("tasks").delete().eq("user_id", user.id),
+      supabase.from("journal").delete().eq("user_id", user.id),
+    ]);
+  }, [user, commitData]);
 
   return {
     data,
