@@ -423,6 +423,10 @@ const Insights = () => {
   const [drillStack, setDrillStack] = useState<DrillLevel[]>([]);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
+  const todayStr = getISTDateStr();
+  const daysPassed = useMemo(() => {
+    return Math.max(1, daysInRange.filter(d => d <= todayStr).length);
+  }, [daysInRange, todayStr]);
   const isCurrentPeriod = offset === 0;
 
   // Current drill level
@@ -450,7 +454,7 @@ const Insights = () => {
     // ── Expenses ──
     const expenses = data.expenses.filter(e => inRange(e.date, start, end));
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
-    const avgPerDay = daysInRange.length > 0 ? totalSpent / daysInRange.length : 0;
+    const avgPerDay = totalSpent / daysPassed;
     const categoryBreakdown = Object.entries(
       expenses.reduce<Record<string, number>>((acc, e) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -469,7 +473,7 @@ const Insights = () => {
     const food = data.food.filter(f => inRange(f.date, start, end));
     const totalCals = food.reduce((s, f) => s + (f.calories || 0), 0);
     const mealsLogged = food.length;
-    const avgCalsPerDay = daysInRange.length > 0 ? totalCals / daysInRange.length : 0;
+    const avgCalsPerDay = totalCals / daysPassed;
     const mealBreakdown = Object.entries(
       food.reduce<Record<string, number>>((acc, f) => {
         acc[f.meal] = (acc[f.meal] || 0) + 1;
@@ -500,7 +504,7 @@ const Insights = () => {
     // ── Habits ──
     const habitStats = data.habits.map(h => {
       const completedInRange = h.completedDates.filter(d => inRange(d, start, end));
-      const rate = daysInRange.length > 0 ? (completedInRange.length / daysInRange.length) * 100 : 0;
+      const rate = (completedInRange.length / daysPassed) * 100;
       let streak = 0;
   const today = getISTDateStr();
       const d = new Date(today + "T12:00:00");
@@ -508,7 +512,7 @@ const Insights = () => {
         streak++;
         d.setDate(d.getDate() - 1);
       }
-      return { name: h.name, completed: completedInRange.length, total: daysInRange.length, rate, streak };
+      return { name: h.name, completed: completedInRange.length, total: daysPassed, rate, streak };
     });
     const totalHabitDays = new Set(data.habits.flatMap(h => h.completedDates.filter(d => inRange(d, start, end)))).size;
 
@@ -534,7 +538,7 @@ const Insights = () => {
 
     return {
       expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length },
-      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: daysInRange.length },
+      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: daysPassed },
       exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown },
       habits: { habitStats, totalHabitDays },
       tasks: { tasksDone, tasksTotal, completionRate, mostProductiveDay },
@@ -788,7 +792,7 @@ const Insights = () => {
             <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
             <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
             <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
-            <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysInRange.length}`} />
+            <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysPassed}`} />
             {insights.exercise.activityBreakdown.length > 0 && (
               <div className="mt-3 space-y-1">
                 <p className="text-xs text-muted-foreground font-medium mb-1">By activity</p>
