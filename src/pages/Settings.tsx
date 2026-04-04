@@ -18,6 +18,7 @@ import {
 const Settings = () => {
   const navigate = useNavigate();
   const life = useLifeData();
+  const { signOut, user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
