@@ -1,10 +1,16 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, Upload, RotateCcw, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useLifeData } from "@/hooks/useLifeData";
+
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureSettings, type FeatureKey } from "@/hooks/useFeatureSettings";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
+
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
@@ -19,7 +25,13 @@ const Settings = () => {
   const navigate = useNavigate();
   const life = useLifeData();
   const { signOut, user } = useAuth();
+  const { settings, toggleFeature } = useFeatureSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("openrouter-api-key") || "");
+
+  useEffect(() => {
+    localStorage.setItem("openrouter-api-key", apiKey);
+  }, [apiKey]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,7 +46,71 @@ const Settings = () => {
           <h1 className="text-xl font-bold tracking-tight leading-none">Settings</h1>
         </header>
 
+        {/* Feature Preferences */}
+        <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/40">
+            <h2 className="text-sm font-semibold">Feature Preferences</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Toggle features you want to track</p>
+          </div>
+          <div className="divide-y divide-border/40">
+            {(Object.keys(settings) as FeatureKey[]).map((key) => (
+              <div key={key} className="flex items-center justify-between px-4 py-3.5 hover:bg-muted/50 transition-all">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`feature-${key}`} className="text-sm font-medium capitalize">
+                    {key}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable or disable the {key} tracking feature
+                  </p>
+                </div>
+                <Switch
+                  id={`feature-${key}`}
+                  checked={settings[key]}
+                  onCheckedChange={() => toggleFeature(key)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Settings */}
+        <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/40">
+            <h2 className="text-sm font-semibold">AI Settings</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Configure AI insights via OpenRouter</p>
+          </div>
+          <div className="px-4 py-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="api-key" className="text-xs font-medium text-muted-foreground">
+                OpenRouter API Key
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="sk-or-v1-..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="text-sm bg-muted/30"
+                />
+                {apiKey && (
+                  <button
+                    onClick={() => setApiKey("")}
+                    className="px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-md transition-all"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Get your key at <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-primary hover:underline">openrouter.ai</a>. Keys are stored locally on your device.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Data Management */}
+
         <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
           <div className="px-4 py-3 border-b border-border/40">
             <h2 className="text-sm font-semibold">Data Management</h2>

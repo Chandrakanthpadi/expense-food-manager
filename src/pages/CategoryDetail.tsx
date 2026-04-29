@@ -24,6 +24,9 @@ const CATEGORIES: Record<string, { label: string; icon: React.ReactNode; colorCl
   journal: { label: "Journal", icon: <BookOpen className="w-4 h-4" />, colorClass: "bg-section-journal" },
 };
 
+const expenseCategories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+
+
 function fmtLocal(d: Date) { return getISTDateStr(d); }
 
 function getFilterRange(mode: FilterMode, monthOffset: number, yearOffset: number, customStart?: Date, customEnd?: Date): [string, string] {
@@ -66,8 +69,11 @@ function inRange(date: string, start: string, end: string) {
 
 const CategoryDetail = () => {
   const navigate = useNavigate();
-  const { category } = useParams<{ category: string }>();
-  const { data } = useLifeData();
+   const { category } = useParams<{ category: string }>();
+  const life = useLifeData();
+  const { data } = life;
+  const [editingId, setEditingId] = useState<string | null>(null);
+
 
   const [filterMode, setFilterMode] = useState<FilterMode>("month");
   const [monthOffset, setMonthOffset] = useState(0);
@@ -373,14 +379,37 @@ const CategoryDetail = () => {
                 </div>
                 <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
                   {group.items.map(e => (
-                    <div key={e.id} className="px-4 py-2.5 flex items-center justify-between">
-                      <div>
-                        <span className="text-sm font-medium">{e.category}</span>
-                        {e.note && <span className="text-xs text-muted-foreground ml-2">{e.note}</span>}
+                    <div key={e.id} className="px-4 py-2.5 flex items-center justify-between group">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {editingId === e.id ? (
+                            <select
+                              autoFocus
+                              value={e.category}
+                              onChange={(evt) => {
+                                life.updateExpense(e.id, { category: evt.target.value });
+                                setEditingId(null);
+                              }}
+                              onBlur={() => setEditingId(null)}
+                              className="text-sm font-medium bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
+                            >
+                              {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                            </select>
+                          ) : (
+                            <span 
+                              onClick={() => setEditingId(e.id)}
+                              className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+                            >
+                              {e.category}
+                            </span>
+                          )}
+                          {e.note && <span className="text-xs text-muted-foreground truncate">{e.note}</span>}
+                        </div>
                       </div>
                       <span className="text-sm font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
                     </div>
                   ))}
+
                 </div>
               </div>
             ))}

@@ -101,3 +101,63 @@
   .stagger-6 { animation-delay: 360ms; }
   .stagger-7 { animation-delay: 420ms; }
 }
+
+/* AI Insights Content Styles */
+.ai-insights-content {
+  @apply text-xs leading-relaxed;
+}
+
+.ai-insights-content h1, 
+.ai-insights-content h2, 
+.ai-insights-content h3 {
+  @apply font-bold text-foreground mt-4 mb-2 first:mt-0;
+}
+
+.ai-insights-content h1 { @apply text-base; }
+.ai-insights-content h2 { @apply text-sm; }
+.ai-insights-content h3 { @apply text-xs; }
+
+.ai-insights-content p {
+  @apply mb-3 last:mb-0;
+}
+
+.ai-insights-content ul, 
+.ai-insights-content ol {
+  @apply mb-3 ml-4 list-outside;
+}
+
+.ai-insights-content ul { @apply list-disc; }
+.ai-insights-content ol { @apply list-decimal; }
+
+.ai-insights-content li {
+  @apply mb-1;
+}
+
+.ai-insights-content table {
+  @apply w-full border-collapse my-4 text-[10px] sm:text-xs overflow-hidden rounded-lg border border-border/60;
+}
+
+.ai-insights-content th {
+  @apply bg-muted/50 font-semibold text-left p-2 border-b border-border/60;
+}
+
+.ai-insights-content td {
+  @apply p-2 border-b border-border/20;
+}
+
+.ai-insights-content tr:last-child td {
+  @apply border-b-0;
+}
+
+.ai-insights-content blockquote {
+  @apply border-l-2 border-primary/40 pl-3 italic text-muted-foreground my-4;
+}
+
+.ai-insights-content code {
+  @apply bg-muted px-1 py-0.5 rounded text-[0.9em] font-mono;
+}
+
+.ai-insights-content hr {
+  @apply my-4 border-border/40;
+}
+

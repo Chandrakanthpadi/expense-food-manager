@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen } from "lucide-react";
 import type { LifeData } from "@/hooks/useLifeData";
+import { useFeatureSettings } from "@/hooks/useFeatureSettings";
 import { getISTDateStr } from "@/lib/utils";
+
 
 type Period = "week" | "month" | "year";
 
@@ -80,6 +82,7 @@ function StatCard({ icon, label, value, sub, colorClass }: StatCardProps) {
 
 export function SummaryStats({ data, selectedDate }: Props) {
   const [period, setPeriod] = useState<Period>("month");
+  const { settings } = useFeatureSettings();
   const [start, end] = getDateRange(selectedDate, period);
 
   const stats = useMemo(() => {
@@ -141,49 +144,62 @@ export function SummaryStats({ data, selectedDate }: Props) {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-2">
-        <StatCard
-          icon={<DollarSign className="w-3.5 h-3.5" />}
-          label="Expenses"
-          value={`$${stats.totalSpent.toFixed(2)}`}
-          sub={stats.topCategory ? `Top: ${stats.topCategory[0]}` : "No expenses"}
-          colorClass="bg-section-expense"
-        />
-        <StatCard
-          icon={<UtensilsCrossed className="w-3.5 h-3.5" />}
-          label="Food"
-          value={`${stats.mealsLogged} meals`}
-          sub={stats.totalCals > 0 ? `${stats.totalCals.toLocaleString()} cal total` : "No calories logged"}
-          colorClass="bg-section-food"
-        />
-        <StatCard
-          icon={<Dumbbell className="w-3.5 h-3.5" />}
-          label="Exercise"
-          value={`${stats.totalMinutes} min`}
-          sub={`${stats.sessions} session${stats.sessions !== 1 ? "s" : ""}`}
-          colorClass="bg-section-exercise"
-        />
-        <StatCard
-          icon={<Target className="w-3.5 h-3.5" />}
-          label="Habits"
-          value={`${stats.habitDays} days`}
-          sub="with completed habits"
-          colorClass="bg-section-habits"
-        />
-        <StatCard
-          icon={<ListTodo className="w-3.5 h-3.5" />}
-          label="Tasks"
-          value={`${stats.tasksDone}/${stats.tasksTotal}`}
-          sub={stats.tasksTotal > 0 ? `${Math.round((stats.tasksDone / stats.tasksTotal) * 100)}% done` : "No tasks"}
-          colorClass="bg-section-tasks"
-        />
-        <StatCard
-          icon={<BookOpen className="w-3.5 h-3.5" />}
-          label="Journal"
-          value={`${stats.journalCount} entries`}
-          sub={stats.journalCount > 0 ? "Keep it up!" : "Start writing"}
-          colorClass="bg-section-journal"
-        />
+        {settings.expenses && (
+          <StatCard
+            icon={<DollarSign className="w-3.5 h-3.5" />}
+            label="Expenses"
+            value={`$${stats.totalSpent.toFixed(2)}`}
+            sub={stats.topCategory ? `Top: ${stats.topCategory[0]}` : "No expenses"}
+            colorClass="bg-section-expense"
+          />
+        )}
+        {settings.food && (
+          <StatCard
+            icon={<UtensilsCrossed className="w-3.5 h-3.5" />}
+            label="Food"
+            value={`${stats.mealsLogged} meals`}
+            sub={stats.totalCals > 0 ? `${stats.totalCals.toLocaleString()} cal total` : "No calories logged"}
+            colorClass="bg-section-food"
+          />
+        )}
+        {settings.exercise && (
+          <StatCard
+            icon={<Dumbbell className="w-3.5 h-3.5" />}
+            label="Exercise"
+            value={`${stats.totalMinutes} min`}
+            sub={`${stats.sessions} session${stats.sessions !== 1 ? "s" : ""}`}
+            colorClass="bg-section-exercise"
+          />
+        )}
+        {settings.habits && (
+          <StatCard
+            icon={<Target className="w-3.5 h-3.5" />}
+            label="Habits"
+            value={`${stats.habitDays} days`}
+            sub="with completed habits"
+            colorClass="bg-section-habits"
+          />
+        )}
+        {settings.tasks && (
+          <StatCard
+            icon={<ListTodo className="w-3.5 h-3.5" />}
+            label="Tasks"
+            value={`${stats.tasksDone}/${stats.tasksTotal}`}
+            sub={stats.tasksTotal > 0 ? `${Math.round((stats.tasksDone / stats.tasksTotal) * 100)}% done` : "No tasks"}
+            colorClass="bg-section-tasks"
+          />
+        )}
+        {settings.journal && (
+          <StatCard
+            icon={<BookOpen className="w-3.5 h-3.5" />}
+            label="Journal"
+            value={`${stats.journalCount} entries`}
+            sub={stats.journalCount > 0 ? "Keep it up!" : "Start writing"}
+            colorClass="bg-section-journal"
+          />
+        )}
       </div>
+
     </div>
   );
 }

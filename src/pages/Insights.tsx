@@ -2,10 +2,21 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
-  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download
+  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
+import { useFeatureSettings } from "@/hooks/useFeatureSettings";
+import { generateAIAnalysis } from "@/lib/aiService";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn, getISTDateStr } from "@/lib/utils";
+import {
+  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip,
+  Cell, PieChart, Pie
+} from "recharts";
+
+
+
 import { createPdfFileName, exportReportToPdf, type PdfReportData } from "@/lib/pdfExport";
 
 type Period = "week" | "month" | "year";
@@ -146,6 +157,94 @@ function Section({ title, icon, colorClass, children, onTitleClick }: SectionPro
   );
 }
 
+const InsightChart = ({ data, color }: { data: any[], color: string }) => {
+  if (data.every(d => d.amount === 0)) return null;
+  return (
+    <div className="h-24 w-full mt-4 mb-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="bg-background/95 border border-border shadow-xl rounded-lg px-2 py-1.5 text-[10px]">
+                    <p className="font-semibold">{new Date(payload[0].payload.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}</p>
+                    <p style={{ color }} className="font-bold">{payload[0].value.toLocaleString()}</p>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Bar dataKey="amount" radius={[2, 2, 0, 0]}>
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={color} fillOpacity={0.4 + (index / data.length) * 0.6} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const CategoryPieChart = ({ data }: { data: [string, number][] }) => {
+  if (data.length === 0) return null;
+  const chartData = data.map(([name, value]) => ({ name, value }));
+  const COLORS = [
+    "var(--section-expense)",
+    "var(--section-food)",
+    "var(--section-exercise)",
+    "var(--section-habits)",
+    "var(--section-tasks)",
+    "var(--section-journal)"
+  ];
+
+  return (
+    <div className="h-56 w-full mt-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            innerRadius={40}
+            outerRadius={60}
+            paddingAngle={2}
+            dataKey="value"
+            stroke="none"
+            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+              const RADIAN = Math.PI / 180;
+              const radius = outerRadius + 12;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  fill="var(--muted-foreground)"
+                  textAnchor={x > cx ? "start" : "end"}
+                  dominantBaseline="central"
+                  className="text-[10px] font-medium"
+                >
+                  {`${name} ${(percent * 100).toFixed(0)}%`}
+                </text>
+              );
+            }}
+            labelLine={false}
+            isAnimationActive={false}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.8} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+
 function MetricRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="flex items-baseline justify-between py-2 border-b border-border/30 last:border-0">
@@ -199,9 +298,11 @@ interface SubBreakdownProps {
   colorClass: string;
   breakdownTitle?: string;
   onRowClick?: (start: string, end: string, label: string) => void;
+  settings: Record<string, boolean>;
 }
 
-function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowClick }: SubBreakdownProps) {
+
+function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowClick, settings }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
   const maxSpent = Math.max(...rows.map(r => r.spent), 1);
@@ -218,12 +319,13 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
           <thead>
             <tr className="border-b border-border/40 text-muted-foreground">
               <th className="text-left px-4 py-2 font-medium">Period</th>
-              <th className="text-right px-3 py-2 font-medium">Spent</th>
-              <th className="text-right px-3 py-2 font-medium">Cal</th>
-              <th className="text-right px-3 py-2 font-medium">Exercise</th>
-              <th className="text-right px-4 py-2 font-medium">Tasks</th>
+              {settings.expenses && <th className="text-right px-3 py-2 font-medium">Spent</th>}
+              {settings.food && <th className="text-right px-3 py-2 font-medium">Cal</th>}
+              {settings.exercise && <th className="text-right px-3 py-2 font-medium">Exercise</th>}
+              {settings.tasks && <th className="text-right px-4 py-2 font-medium">Tasks</th>}
             </tr>
           </thead>
+
           <tbody>
             {rows.map(r => {
               const isTotal = r.label === "Total";
@@ -244,15 +346,16 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
                       {isClickable && <ChevronRight className="w-3 h-3 text-muted-foreground" />}
                     </span>
                   </td>
-                  <td className="text-right px-3 py-2 tabular-nums">
-                    <div className="flex items-center justify-end gap-1.5">
+                  {settings.expenses && (
+                    <td className="text-right px-3 py-2 tabular-nums">
                       <span>₹{r.spent.toFixed(0)}</span>
-                    </div>
-                  </td>
-                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>
-                  <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>
-                  <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>
+                    </td>
+                  )}
+                  {settings.food && <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.calories > 0 ? r.calories.toLocaleString() : "–"}</td>}
+                  {settings.exercise && <td className="text-right px-3 py-2 tabular-nums text-muted-foreground">{r.exercise > 0 ? `${r.exercise}m` : "–"}</td>}
+                  {settings.tasks && <td className="text-right px-4 py-2 tabular-nums">{r.tasks}</td>}
                 </tr>
+
               );
             })}
           </tbody>
@@ -406,20 +509,128 @@ function DayDetail({ date, data: lifeData, onBack }: { date: string; data: any; 
   );
 }
 
+const expenseCategories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+
+// Category expenses detail view
+function CategoryExpensesDetail({
+  category,
+  start,
+  end,
+  data: lifeData,
+  onBack,
+  onUpdate
+}: {
+  category: string;
+  start: string;
+  end: string;
+  data: any;
+  onBack: () => void;
+  onUpdate: (id: string, updates: any) => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const expenses = lifeData.expenses.filter((e: any) => e.category === category && inRange(e.date, start, end))
+    .sort((a: any, b: any) => b.date.localeCompare(a.date));
+  const total = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+
+  return (
+    <div className="space-y-4">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-primary hover:underline active:scale-95 transition-all">
+        <ChevronLeft className="w-3.5 h-3.5" />Back
+      </button>
+      <div className="bg-card rounded-xl border border-border/60 px-4 py-3 flex justify-between items-center">
+        <h2 className="text-sm font-bold">{category} Expenses</h2>
+        <span className="text-sm font-bold tabular-nums">₹{total.toFixed(2)}</span>
+      </div>
+
+      <div className="bg-card rounded-xl border border-border/60 divide-y divide-border/20 overflow-hidden">
+        {expenses.map((e: any) => (
+          <div key={e.id} className="px-4 py-3 flex justify-between items-center group">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium">{new Date(e.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {e.note && <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{e.note}</span>}
+
+                {editingId === e.id ? (
+                  <select
+                    autoFocus
+                    value={e.category}
+                    onChange={(evt) => {
+                      onUpdate(e.id, { category: evt.target.value });
+                      setEditingId(null);
+                    }}
+                    onBlur={() => setEditingId(null)}
+                    className="text-[9px] bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
+                  >
+                    {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => setEditingId(e.id)}
+                    className="text-[9px] text-muted-foreground hover:text-foreground bg-muted/40 px-1 rounded transition-colors"
+                  >
+                    {e.category}
+                  </button>
+                )}
+              </div>
+            </div>
+            <span className="text-xs font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+          </div>
+        ))}
+        {expenses.length === 0 && (
+          <div className="px-4 py-8 text-center text-xs text-muted-foreground">No expenses found for this category in this period</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+
 interface DrillLevel {
   label: string;
   start: string;
   end: string;
-  level: "year" | "month" | "week" | "day";
+  level: "year" | "month" | "week" | "day" | "expense-category";
+  category?: string;
 }
+
 
 const Insights = () => {
   const navigate = useNavigate();
-  const { data } = useLifeData();
+  const life = useLifeData();
+  const { data } = life;
+  const { settings } = useFeatureSettings();
   const [period, setPeriod] = useState<Period>("month");
   const [offset, setOffset] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleAIAnalysis = async () => {
+    setIsAnalyzing(true);
+    setAiError(null);
+    try {
+      const enabledFeatures = Object.entries(settings)
+        .filter(([_, enabled]) => enabled)
+        .map(([key]) => key);
+
+      const response = await generateAIAnalysis({
+        data,
+        periodLabel: periodLabel(period, offset),
+        enabledFeatures,
+        startDate: activeStart,
+        endDate: activeEnd
+      });
+
+      setAiResponse(response);
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate AI analysis");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   const [drillStack, setDrillStack] = useState<DrillLevel[]>([]);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
@@ -440,6 +651,10 @@ const Insights = () => {
     return getSubPeriods(activeLevel as Period, activeStart, activeEnd);
   }, [activeLevel, activeStart, activeEnd]);
 
+  const activeDaysInRange = getDaysInRange(activeStart, activeEnd);
+  const activeDaysPassed = Math.max(1, activeDaysInRange.filter(d => d <= todayStr).length);
+
+
   const getSubData = useCallback((s: string, e: string) => {
     const expenses = data.expenses.filter(ex => inRange(ex.date, s, e));
     const spent = expenses.reduce((sum, ex) => sum + ex.amount, 0);
@@ -452,9 +667,9 @@ const Insights = () => {
 
   const insights = useMemo(() => {
     // ── Expenses ──
-    const expenses = data.expenses.filter(e => inRange(e.date, start, end));
+    const expenses = data.expenses.filter(e => inRange(e.date, activeStart, activeEnd));
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
-    const avgPerDay = totalSpent / daysPassed;
+    const avgPerDay = totalSpent / activeDaysPassed;
     const categoryBreakdown = Object.entries(
       expenses.reduce<Record<string, number>>((acc, e) => {
         acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -463,17 +678,17 @@ const Insights = () => {
     ).sort((a, b) => b[1] - a[1]);
     const maxCatAmount = categoryBreakdown.length > 0 ? categoryBreakdown[0][1] : 0;
 
-    const dailySpend = daysInRange.map(d => ({
+    const dailySpend = activeDaysInRange.map(d => ({
       date: d,
       amount: expenses.filter(e => e.date === d).reduce((s, e) => s + e.amount, 0),
     }));
     const highestDay = dailySpend.length > 0 ? dailySpend.reduce((a, b) => a.amount > b.amount ? a : b) : null;
 
     // ── Food ──
-    const food = data.food.filter(f => inRange(f.date, start, end));
+    const food = data.food.filter(f => inRange(f.date, activeStart, activeEnd));
     const totalCals = food.reduce((s, f) => s + (f.calories || 0), 0);
     const mealsLogged = food.length;
-    const avgCalsPerDay = totalCals / daysPassed;
+    const avgCalsPerDay = totalCals / activeDaysPassed;
     const mealBreakdown = Object.entries(
       food.reduce<Record<string, number>>((acc, f) => {
         acc[f.meal] = (acc[f.meal] || 0) + 1;
@@ -481,7 +696,7 @@ const Insights = () => {
       }, {})
     ).sort((a, b) => b[1] - a[1]);
 
-    const mealChecks = data.mealChecks.filter(m => inRange(m.date, start, end));
+    const mealChecks = data.mealChecks.filter(m => inRange(m.date, activeStart, activeEnd));
     const breakfastCount = mealChecks.filter(m => m.breakfast).length;
     const lunchCount = mealChecks.filter(m => m.lunch).length;
     const dinnerCount = mealChecks.filter(m => m.dinner).length;
@@ -489,7 +704,7 @@ const Insights = () => {
     const allThreeMeals = mealChecks.filter(m => m.breakfast && m.lunch && m.dinner).length;
 
     // ── Exercise ──
-    const exercise = data.exercise.filter(e => inRange(e.date, start, end));
+    const exercise = data.exercise.filter(e => inRange(e.date, activeStart, activeEnd));
     const totalMinutes = exercise.reduce((s, e) => s + e.duration, 0);
     const sessions = exercise.length;
     const avgPerSession = sessions > 0 ? totalMinutes / sessions : 0;
@@ -503,32 +718,32 @@ const Insights = () => {
 
     // ── Habits ──
     const habitStats = data.habits.map(h => {
-      const completedInRange = h.completedDates.filter(d => inRange(d, start, end));
-      const rate = (completedInRange.length / daysPassed) * 100;
+      const completedInRange = h.completedDates.filter(d => inRange(d, activeStart, activeEnd));
+      const rate = (completedInRange.length / activeDaysPassed) * 100;
       let streak = 0;
-  const today = getISTDateStr();
+      const today = getISTDateStr();
       const d = new Date(today + "T12:00:00");
       while (h.completedDates.includes(fmtLocal(d))) {
         streak++;
         d.setDate(d.getDate() - 1);
       }
-      return { name: h.name, completed: completedInRange.length, total: daysPassed, rate, streak };
+      return { name: h.name, completed: completedInRange.length, total: activeDaysPassed, rate, streak };
     });
-    const totalHabitDays = new Set(data.habits.flatMap(h => h.completedDates.filter(d => inRange(d, start, end)))).size;
+    const totalHabitDays = new Set(data.habits.flatMap(h => h.completedDates.filter(d => inRange(d, activeStart, activeEnd)))).size;
 
     // ── Tasks ──
-    const tasks = data.tasks.filter(t => inRange(t.date, start, end));
+    const tasks = data.tasks.filter(t => inRange(t.date, activeStart, activeEnd));
     const tasksDone = tasks.filter(t => t.done).length;
     const tasksTotal = tasks.length;
     const completionRate = tasksTotal > 0 ? (tasksDone / tasksTotal) * 100 : 0;
-    const productiveDays = daysInRange.map(d => ({
+    const productiveDays = activeDaysInRange.map(d => ({
       date: d,
-      done: tasks.filter(t => t.date === d && t.done).length,
+      done: tasks.filter(t => t.date === d && t.done).length
     })).sort((a, b) => b.done - a.done);
     const mostProductiveDay = productiveDays.find(d => d.done > 0);
 
     // ── Journal ──
-    const journal = data.journal.filter(j => inRange(j.date, start, end));
+    const journal = data.journal.filter(j => inRange(j.date, activeStart, activeEnd));
     const moodBreakdown = Object.entries(
       journal.reduce<Record<string, number>>((acc, j) => {
         acc[j.mood] = (acc[j.mood] || 0) + 1;
@@ -536,15 +751,27 @@ const Insights = () => {
       }, {})
     ).sort((a, b) => b[1] - a[1]);
 
+    const dailyCals = activeDaysInRange.map(d => ({
+      date: d,
+      amount: food.filter(f => f.date === d).reduce((s, f) => s + (f.calories || 0), 0),
+    }));
+
+    const dailyExercise = activeDaysInRange.map(d => ({
+      date: d,
+      amount: exercise.filter(e => e.date === d).reduce((s, e) => s + e.duration, 0),
+    }));
+
     return {
-      expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length },
-      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: daysPassed },
-      exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown },
+      expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length, dailySpend },
+      food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: activeDaysPassed, dailyCals },
+      exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown, dailyExercise },
       habits: { habitStats, totalHabitDays },
       tasks: { tasksDone, tasksTotal, completionRate, mostProductiveDay },
       journal: { count: journal.length, moodBreakdown },
     };
-  }, [data, start, end, daysInRange]);
+  }, [data, activeStart, activeEnd, activeDaysPassed, activeDaysInRange]);
+
+
 
   const handleExport = useCallback(async () => {
     if (exporting) return;
@@ -552,28 +779,28 @@ const Insights = () => {
     try {
       // Defer insights calculations inside the handleExport so as not to clutter the render loop
       const tables = [];
-      if (insights.expenses.categoryBreakdown.length > 0) {
+      if (settings.expenses && insights.expenses.categoryBreakdown.length > 0) {
         tables.push({
           title: "Expenses Breakdown",
           head: ["Category", "Amount"],
           body: insights.expenses.categoryBreakdown.map(([cat, amt]) => [cat, `Rs ${amt.toFixed(2)}`]),
         });
       }
-      if (insights.food.mealBreakdown.length > 0) {
+      if (settings.food && insights.food.mealBreakdown.length > 0) {
         tables.push({
           title: "Nutrition Summary",
           head: ["Meal", "Logs"],
           body: insights.food.mealBreakdown.map(([meal, count]) => [meal.toUpperCase(), count]),
         });
       }
-      if (insights.exercise.activityBreakdown.length > 0) {
+      if (settings.exercise && insights.exercise.activityBreakdown.length > 0) {
         tables.push({
           title: "Exercise Summary",
           head: ["Activity", "Duration"],
           body: insights.exercise.activityBreakdown.map(([activity, mins]) => [activity, `${mins} min`]),
         });
       }
-      if (insights.habits.habitStats.length > 0) {
+      if (settings.habits && insights.habits.habitStats.length > 0) {
         tables.push({
           title: "Habit Tracking",
           head: ["Habit", "Completion Rate", "Current Streak"],
@@ -581,18 +808,19 @@ const Insights = () => {
         });
       }
 
+      const summary = [];
+      if (settings.expenses) summary.push({ label: "Total Spent", value: `Total: Rs ${insights.expenses.totalSpent.toFixed(2)}` });
+      if (settings.food) summary.push({ label: "Total Calories", value: `${insights.food.totalCals.toLocaleString()} cal` });
+      if (settings.exercise) summary.push({ label: "Total Exercise", value: `${insights.exercise.totalMinutes} min` });
+      if (settings.tasks) summary.push({ label: "Task Completion", value: `${Math.round(insights.tasks.completionRate)}%` });
+      if (settings.journal) summary.push({ label: "Journal Entries", value: `${insights.journal.count} entries` });
+
       const reportData: PdfReportData = {
         fileName: createPdfFileName("lifeflow-insights", periodLabel(period, offset)),
         title: "Lifeflow Insights",
         subtitle: `Dashboard export for ${periodLabel(period, offset)}`,
         themeColor: [33, 100, 200],
-        summary: [
-          { label: "Total Spent", value: `Total: Rs ${insights.expenses.totalSpent.toFixed(2)}` },
-          { label: "Total Calories", value: `${insights.food.totalCals.toLocaleString()} cal` },
-          { label: "Total Exercise", value: `${insights.exercise.totalMinutes} min` },
-          { label: "Task Completion", value: `${Math.round(insights.tasks.completionRate)}%` },
-          { label: "Journal Entries", value: `${insights.journal.count} entries` },
-        ],
+        summary,
         tables,
       };
 
@@ -695,12 +923,77 @@ const Insights = () => {
 
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* Day detail view */}
+          {/* AI Analysis Section */}
+          <div className="bg-card rounded-xl border border-border/60 overflow-hidden mb-4">
+            <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <h2 className="text-sm font-semibold">AI Insights</h2>
+              </div>
+              <button
+                onClick={handleAIAnalysis}
+                disabled={isAnalyzing}
+                className="text-xs font-medium text-primary hover:bg-primary/5 px-2 py-1 rounded-md transition-all disabled:opacity-50"
+              >
+                {isAnalyzing ? "Analyzing..." : "Regenerate"}
+              </button>
+            </div>
+            <div className="p-4">
+              {!aiResponse && !aiError && !isAnalyzing && (
+                <div className="text-center py-4 space-y-3">
+                  <p className="text-xs text-muted-foreground">Get personalized insights and recommendations based on your data.</p>
+                  <button
+                    onClick={handleAIAnalysis}
+                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate AI Analysis
+                  </button>
+                </div>
+              )}
+
+              {isAnalyzing && (
+                <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                  <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  <p className="text-xs text-muted-foreground animate-pulse">Consulting the AI coach...</p>
+                </div>
+              )}
+
+              {aiError && (
+                <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 flex gap-2 items-start">
+                  <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-xs text-destructive">{aiError}</p>
+                </div>
+              )}
+
+              {aiResponse && !isAnalyzing && (
+                <div className="prose prose-sm dark:prose-invert max-w-none ai-insights-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {aiResponse}
+                  </ReactMarkdown>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Day or Category detail view */}
           {activeLevel === "day" ? (
             <DayDetail
               date={activeStart}
               data={data}
               onBack={() => setDrillStack(s => s.slice(0, -1))}
+            />
+          ) : activeLevel === "expense-category" ? (
+            <CategoryExpensesDetail
+              category={currentDrill?.category || ""}
+              start={activeStart}
+              end={activeEnd}
+              data={data}
+              onBack={() => setDrillStack(s => s.slice(0, -1))}
+              onUpdate={life.updateExpense}
             />
           ) : (
             <>
@@ -716,165 +1009,178 @@ const Insights = () => {
                     setDrillStack(s => [...s, { label, start: rowStart, end: rowEnd, level: next }]);
                   }
                 }}
+                settings={settings}
               />
 
-          {/* ── Expenses ── */}
-          <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense" onTitleClick={() => navigate("/insights/expenses")}>
-            <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
-            <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
-            <MetricRow label="Transactions" value={String(insights.expenses.count)} />
-            {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
-              <MetricRow
-                label="Biggest day"
-                value={`₹${insights.expenses.highestDay.amount.toFixed(2)}`}
-                sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
-              />
-            )}
-            {insights.expenses.categoryBreakdown.length > 0 && (
-              <>
-                <p className="text-xs text-muted-foreground font-medium mt-3 mb-1">By category</p>
-                <MiniBar
-                  values={insights.expenses.categoryBreakdown.map(([label, amount]) => ({ label, amount }))}
-                  max={insights.expenses.maxCatAmount}
-                  colorClass="bg-section-expense"
-                />
-              </>
-            )}
-          </Section>
 
-          {/* ── Food ── */}
-          <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food" onTitleClick={() => navigate("/insights/food")}>
-            <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
-            <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
-            <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
-            <div className="mt-3 space-y-1.5">
-              <p className="text-xs text-muted-foreground font-medium mb-1">Meal consistency</p>
-              {[
-                { label: "Breakfast", count: insights.food.breakfastCount },
-                { label: "Lunch", count: insights.food.lunchCount },
-                { label: "Dinner", count: insights.food.dinnerCount },
-                { label: "Snack", count: insights.food.snackCount },
-              ].map(m => {
-                const rate = insights.food.daysInPeriod > 0 ? (m.count / insights.food.daysInPeriod) * 100 : 0;
-                return (
-                  <div key={m.label} className="space-y-0.5">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{m.label}</span>
-                      <span className="tabular-nums font-medium">{m.count}/{insights.food.daysInPeriod} <span className="text-muted-foreground">({Math.round(rate)}%)</span></span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-section-food rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-              {insights.food.allThreeMeals > 0 && (
-                <p className="text-[10px] text-muted-foreground mt-2">
-                  ✅ All 3 main meals on <span className="font-semibold text-foreground">{insights.food.allThreeMeals}</span> day{insights.food.allThreeMeals !== 1 ? "s" : ""}
-                </p>
-              )}
-            </div>
-            {insights.food.mealBreakdown.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">Food entries by meal</p>
-                {insights.food.mealBreakdown.map(([meal, count]) => (
-                  <div key={meal} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground capitalize">{meal}</span>
-                    <span className="tabular-nums font-medium">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+              {/* ── Expenses ── */}
+              {settings.expenses && (
+                <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense" onTitleClick={() => navigate("/insights/expenses")}>
+                  <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
+                  <InsightChart data={insights.expenses.dailySpend} color="var(--section-expense)" />
+                  <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
 
-          {/* ── Exercise ── */}
-          <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise" onTitleClick={() => navigate("/insights/exercise")}>
-            <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
-            <MetricRow label="Sessions" value={String(insights.exercise.sessions)} />
-            <MetricRow label="Avg per session" value={`${Math.round(insights.exercise.avgPerSession)} min`} />
-            <MetricRow label="Active days" value={String(insights.exercise.activeDays)} sub={`of ${daysPassed}`} />
-            {insights.exercise.activityBreakdown.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">By activity</p>
-                {insights.exercise.activityBreakdown.map(([activity, mins]) => (
-                  <div key={activity} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{activity}</span>
-                    <span className="tabular-nums font-medium">{mins} min</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* ── Habits ── */}
-          <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits" onTitleClick={() => navigate("/insights/habits")}>
-            <MetricRow label="Active days" value={String(insights.habits.totalHabitDays)} sub={`of ${daysInRange.length}`} />
-            {insights.habits.habitStats.length > 0 ? (
-              <div className="mt-3 space-y-2.5">
-                {insights.habits.habitStats.map(h => (
-                  <div key={h.name} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">{h.name}</span>
-                      <div className="flex items-center gap-2">
-                        {h.streak > 0 && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-destructive font-medium">
-                            <Flame className="w-3 h-3" />{h.streak}d
+                  <MetricRow label="Transactions" value={String(insights.expenses.count)} />
+                  {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
+                    <MetricRow
+                      label="Biggest day"
+                      value={`₹${insights.expenses.highestDay.amount.toFixed(2)}`}
+                      sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
+                    />
+                  )}
+                  {insights.expenses.categoryBreakdown.length > 0 && (
+                    <div className="mt-4 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium mb-2 px-1">By category</p>
+                      <CategoryPieChart data={insights.expenses.categoryBreakdown} />
+                      {insights.expenses.categoryBreakdown.map(([cat, amt]) => (
+                        <div
+                          key={cat}
+                          onClick={() => setDrillStack(s => [...s, { label: cat, start: activeStart, end: activeEnd, level: "expense-category", category: cat }])}
+                          className="flex items-center justify-between px-2 py-2.5 rounded-lg hover:bg-muted/50 active:bg-muted/80 cursor-pointer transition-colors group"
+                        >
+                          <span className="text-xs font-medium text-foreground flex items-center gap-2">
+                            {cat}
+                            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           </span>
-                        )}
-                        <span className="text-xs tabular-nums text-muted-foreground">{Math.round(h.rate)}%</span>
-                      </div>
+                          <div className="text-right">
+                            <p className="text-xs font-semibold tabular-nums">₹{amt.toFixed(2)} - {((amt / insights.expenses.totalSpent) * 100).toFixed(0)}%</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-section-habits rounded-full transition-all duration-500" style={{ width: `${h.rate}%` }} />
+                  )}
+
+                </Section>
+              )}
+
+              {/* ── Food ── */}
+              {settings.food && (
+                <Section title="Nutrition" icon={<UtensilsCrossed className="w-4 h-4" />} colorClass="bg-section-food" onTitleClick={() => navigate("/insights/food")}>
+                  <MetricRow label="Meals logged" value={String(insights.food.mealsLogged)} />
+                  <MetricRow label="Total calories" value={insights.food.totalCals.toLocaleString()} sub="cal" />
+                  <InsightChart data={insights.food.dailyCals} color="var(--section-food)" />
+                  <MetricRow label="Daily avg calories" value={Math.round(insights.food.avgCalsPerDay).toLocaleString()} sub="cal" />
+
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">Meal consistency</p>
+                    {[
+                      { label: "Breakfast", count: insights.food.breakfastCount },
+                      { label: "Lunch", count: insights.food.lunchCount },
+                      { label: "Dinner", count: insights.food.dinnerCount },
+                      { label: "Snack", count: insights.food.snackCount },
+                    ].map(m => {
+                      const rate = insights.food.daysInPeriod > 0 ? (m.count / insights.food.daysInPeriod) * 100 : 0;
+                      return (
+                        <div key={m.label} className="space-y-0.5">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{m.label}</span>
+                            <span className="tabular-nums font-medium">{m.count}/{insights.food.daysInPeriod} <span className="text-muted-foreground">({Math.round(rate)}%)</span></span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-section-food rounded-full transition-all duration-500" style={{ width: `${rate}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {insights.food.allThreeMeals > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        ✅ All 3 main meals on <span className="font-semibold text-foreground">{insights.food.allThreeMeals}</span> day{insights.food.allThreeMeals !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                  {insights.food.mealBreakdown.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Food entries by meal</p>
+                      {insights.food.mealBreakdown.map(([meal, count]) => (
+                        <div key={meal} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground capitalize">{meal}</span>
+                          <span className="tabular-nums font-medium">{count}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-2">No habits tracked yet</p>
-            )}
-          </Section>
+                  )}
+                </Section>
+              )}
 
-          {/* ── Tasks ── */}
-          <Section title="Tasks" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks" onTitleClick={() => navigate("/insights/tasks")}>
-            <MetricRow label="Completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
-            <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
-            {insights.tasks.mostProductiveDay && (
-              <MetricRow
-                label="Most productive day"
-                value={`${insights.tasks.mostProductiveDay.done} tasks`}
-                sub={new Date(insights.tasks.mostProductiveDay.date + "T12:00:00").toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" })}
-              />
-            )}
-            {insights.tasks.tasksTotal > 0 && (
-              <div className="mt-3 flex items-center gap-2">
-                {insights.tasks.completionRate >= 80 ? (
-                  <span className="flex items-center gap-1 text-xs text-accent"><Award className="w-3.5 h-3.5" />Great productivity!</span>
-                ) : insights.tasks.completionRate >= 50 ? (
-                  <span className="flex items-center gap-1 text-xs text-primary"><TrendingUp className="w-3.5 h-3.5" />Getting there, keep going!</span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingDown className="w-3.5 h-3.5" />Try breaking tasks smaller</span>
-                )}
-              </div>
-            )}
-          </Section>
+              {/* ── Exercise ── */}
+              {settings.exercise && (
+                <Section title="Exercise" icon={<Dumbbell className="w-4 h-4" />} colorClass="bg-section-exercise" onTitleClick={() => navigate("/insights/exercise")}>
+                  <MetricRow label="Total time" value={`${insights.exercise.totalMinutes} min`} />
+                  <MetricRow label="Active days" value={String(insights.exercise.activeDays)} />
+                  <InsightChart data={insights.exercise.dailyExercise} color="var(--section-exercise)" />
+                  <MetricRow label="Avg duration" value={`${insights.exercise.avgPerSession.toFixed(1)} min`} />
 
-          {/* ── Journal ── */}
-          <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal" onTitleClick={() => navigate("/insights/journal")}>
-            <MetricRow label="Entries" value={String(insights.journal.count)} />
-            <MetricRow label="Journaling days" value={String(insights.journal.count)} sub={`of ${daysInRange.length}`} />
-            {insights.journal.moodBreakdown.length > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">Mood distribution</p>
-                {insights.journal.moodBreakdown.map(([mood, count]) => (
-                  <div key={mood} className="flex justify-between text-xs">
-                    <span>{mood}</span>
-                    <span className="tabular-nums font-medium">{count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+                  {insights.exercise.activityBreakdown.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">By activity</p>
+                      {insights.exercise.activityBreakdown.map(([activity, mins]) => (
+                        <div key={activity} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{activity}</span>
+                          <span className="tabular-nums font-medium">{mins} min</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+              )}
+
+              {/* ── Habits ── */}
+              {settings.habits && (
+                <Section title="Habits" icon={<Target className="w-4 h-4" />} colorClass="bg-section-habits" onTitleClick={() => navigate("/insights/habits")}>
+                  <MetricRow label="Active habits" value={String(insights.habits.habitStats.length)} />
+                  <MetricRow label="Total completions" value={String(insights.habits.totalHabitDays)} sub={`across all`} />
+                  {insights.habits.habitStats.length > 0 && (
+                    <div className="mt-3 space-y-2.5">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Top habits</p>
+                      {insights.habits.habitStats.slice(0, 3).map(h => (
+                        <div key={h.name} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">{h.name}</span>
+                            <span className="tabular-nums font-medium">{Math.round(h.rate)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-section-habits rounded-full transition-all duration-500" style={{ width: `${h.rate}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+              )}
+
+              {/* ── Tasks ── */}
+              {settings.tasks && (
+                <Section title="Productivity" icon={<ListTodo className="w-4 h-4" />} colorClass="bg-section-tasks" onTitleClick={() => navigate("/insights/tasks")}>
+                  <MetricRow label="Tasks completed" value={`${insights.tasks.tasksDone}/${insights.tasks.tasksTotal}`} />
+                  <MetricRow label="Completion rate" value={`${Math.round(insights.tasks.completionRate)}%`} />
+                  {insights.tasks.mostProductiveDay && (
+                    <MetricRow
+                      label="Most productive"
+                      value={`${insights.tasks.mostProductiveDay.done} tasks`}
+                      sub={new Date(insights.tasks.mostProductiveDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
+                    />
+                  )}
+                </Section>
+              )}
+
+              {/* ── Journal ── */}
+              {settings.journal && (
+                <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal" onTitleClick={() => navigate("/insights/journal")}>
+                  <MetricRow label="Entries written" value={String(insights.journal.count)} />
+                  {insights.journal.moodBreakdown.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium mb-1">Mood frequency</p>
+                      {insights.journal.moodBreakdown.map(([mood, count]) => (
+                        <div key={mood} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground capitalize">{mood}</span>
+                          <span className="tabular-nums font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+              )}
+
             </>
           )}
         </div>

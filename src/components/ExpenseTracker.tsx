@@ -9,12 +9,15 @@ interface Props {
   selectedDate: string;
   onAdd: (amount: number, category: string, note: string, date?: string) => void;
   onRemove: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<Expense>) => void;
 }
 
-export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove }: Props) {
+export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpdate }: Props) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(categories[0]);
   const [note, setNote] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
 
   const dayExpenses = expenses.filter(e => e.date === selectedDate);
   const dayTotal = dayExpenses.reduce((s, e) => s + e.amount, 0);
@@ -56,18 +59,41 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove }: Prop
       {dayExpenses.length > 0 && (
         <ul className="space-y-2 pt-1">
           {dayExpenses.map(e => (
-            <li key={e.id} className="flex items-center gap-2 text-sm">
+            <li key={e.id} className="flex items-center gap-2 text-sm group">
               <span className="w-2 h-2 rounded-full bg-section-expense/60 shrink-0" />
               <span className="flex-1 truncate">{e.note || e.category}</span>
-              <span className="text-muted-foreground text-xs">{e.category}</span>
+              
+              {editingId === e.id ? (
+                <select 
+                  autoFocus
+                  value={e.category} 
+                  onChange={(evt) => {
+                    onUpdate(e.id, { category: evt.target.value });
+                    setEditingId(null);
+                  }}
+                  onBlur={() => setEditingId(null)}
+                  className="text-[10px] bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
+                >
+                  {categories.map(c => <option key={c}>{c}</option>)}
+                </select>
+              ) : (
+                <button 
+                  onClick={() => setEditingId(e.id)}
+                  className="text-muted-foreground text-[10px] hover:text-foreground transition-colors px-1 bg-muted/30 rounded"
+                >
+                  {e.category}
+                </button>
+              )}
+
               <span className="tabular-nums font-medium">₹{e.amount.toFixed(2)}</span>
-              <button onClick={() => onRemove(e.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+              <button onClick={() => onRemove(e.id)} className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all">
                 <X className="w-3.5 h-3.5" />
               </button>
             </li>
           ))}
         </ul>
       )}
+
     </div>
   );
 }

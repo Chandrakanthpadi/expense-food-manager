@@ -88,6 +88,22 @@ export function useLifeData() {
     supabase.from("expenses").delete().eq("id", id).then();
   }, [commitData]);
 
+  const updateExpense = useCallback((id: string, updates: Partial<Expense>) => {
+    if (!user) return;
+    const current = dataRef.current;
+    const entry = current.expenses.find(e => e.id === id);
+    if (!entry) return;
+    
+    const next = { ...entry, ...updates };
+    commitData({
+      ...current,
+      expenses: current.expenses.map(e => e.id === id ? next : e)
+    });
+    
+    supabase.from("expenses").update(updates).eq("id", id).then();
+  }, [user, commitData]);
+
+
   // ── Food ──
   const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
     if (!user) return;
@@ -284,7 +300,7 @@ export function useLifeData() {
 
   return {
     data,
-    addExpense, removeExpense,
+    addExpense, removeExpense, updateExpense,
     addFood, removeFood, toggleMealCheck,
     addExercise, removeExercise,
     addHabit, toggleHabit, removeHabit,
