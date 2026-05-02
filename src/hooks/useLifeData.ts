@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getISTDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { createEmptyLifeData, mergeLifeData, type LifeData } from "@/lib/lifeDataTypes";
+import { createEmptyLifeData, mergeLifeData, type LifeData, type Expense } from "@/lib/lifeDataTypes";
 
 export type {
   Expense,
