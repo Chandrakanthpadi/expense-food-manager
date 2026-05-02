@@ -6,15 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LogIn, UserPlus, Loader2, KeyRound, ArrowLeft } from "lucide-react";
 
-type Mode = "signin" | "signup" | "forgot-email" | "forgot-otp" | "forgot-newpass";
+type Mode = "signin" | "signup" | "forgot";
 
 const Auth = () => {
   const { user, loading, signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +25,7 @@ const Auth = () => {
     );
   }
 
-  if (user && mode !== "forgot-newpass") return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/" replace />;
 
   const reset = (next: Mode) => {
     setMode(next);
@@ -47,30 +45,12 @@ const Auth = () => {
           ? await signUp(email, password)
           : await signIn(email, password);
         if (result.error) setError(result.error);
-      } else if (mode === "forgot-email") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
-        if (error) setError(error.message);
-        else {
-          setInfo("We sent a 6-digit code to your email.");
-          setMode("forgot-otp");
-        }
-      } else if (mode === "forgot-otp") {
-        const { error } = await supabase.auth.verifyOtp({
-          email,
-          token: otp,
-          type: "recovery",
+      } else if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) setError(error.message);
-        else {
-          setInfo(null);
-          setMode("forgot-newpass");
-        }
-      } else if (mode === "forgot-newpass") {
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) setError(error.message);
-        else {
-          setInfo("Password updated. You're signed in.");
-        }
+        else setInfo("Check your inbox for a reset link. It will let you set a new password.");
       }
     } finally {
       setSubmitting(false);
@@ -80,9 +60,7 @@ const Auth = () => {
   const titleMap: Record<Mode, { title: string; subtitle: string }> = {
     signin: { title: "LifeFlow", subtitle: "Sign in to your account" },
     signup: { title: "LifeFlow", subtitle: "Create an account to get started" },
-    "forgot-email": { title: "Reset password", subtitle: "Enter your email to receive a code" },
-    "forgot-otp": { title: "Enter code", subtitle: `We sent a 6-digit code to ${email}` },
-    "forgot-newpass": { title: "New password", subtitle: "Choose a new password for your account" },
+    forgot: { title: "Reset password", subtitle: "Enter your email to receive a reset link" },
   };
 
   const { title, subtitle } = titleMap[mode];
@@ -103,16 +81,8 @@ const Auth = () => {
             </div>
           )}
 
-          {mode === "forgot-email" && (
+          {mode === "forgot" && (
             <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-          )}
-
-          {mode === "forgot-otp" && (
-            <Input type="text" inputMode="numeric" placeholder="6-digit code" value={otp} onChange={(e) => setOtp(e.target.value.trim())} required maxLength={6} autoComplete="one-time-code" />
-          )}
-
-          {mode === "forgot-newpass" && (
-            <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
           )}
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
@@ -130,15 +100,13 @@ const Auth = () => {
             )}
             {mode === "signup" && "Sign Up"}
             {mode === "signin" && "Sign In"}
-            {mode === "forgot-email" && "Send code"}
-            {mode === "forgot-otp" && "Verify code"}
-            {mode === "forgot-newpass" && "Update password"}
+            {mode === "forgot" && "Send reset link"}
           </Button>
         </form>
 
         {mode === "signin" && (
           <div className="text-center">
-            <button type="button" onClick={() => reset("forgot-email")} className="text-sm text-primary font-medium hover:underline">
+            <button type="button" onClick={() => reset("forgot")} className="text-sm text-primary font-medium hover:underline">
               Forgot password?
             </button>
           </div>
@@ -153,7 +121,7 @@ const Auth = () => {
           </p>
         )}
 
-        {(mode === "forgot-email" || mode === "forgot-otp" || mode === "forgot-newpass") && (
+        {mode === "forgot" && (
           <button type="button" onClick={() => reset("signin")} className="flex items-center justify-center gap-1 mx-auto text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-3 h-3" /> Back to sign in
           </button>
