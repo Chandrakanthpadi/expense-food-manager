@@ -145,3 +145,87 @@ export async function generateAIAnalysis({ data, periodLabel, enabledFeatures, s
   const result = await response.json();
   return result.choices[0].message.content as string;
 }
+
+export async function categorizeExpense(note: string, categories: string[]) {
+  const apiKey = localStorage.getItem("openrouter-api-key");
+  if (!apiKey || !note.trim()) return null;
+
+  const prompt = `
+    Analyze the following expense note and choose the most appropriate category from the provided list.
+    Note: "${note}"
+    Categories: ${categories.join(", ")}
+    Return ONLY the category name. If none fit perfectly, pick "Other".
+  `;
+
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "LifeFlow Manager",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) return null;
+    const result = await response.json();
+    const suggested = result.choices[0].message.content.trim();
+    const match = categories.find(c => c.toLowerCase() === suggested.toLowerCase());
+    return match || null;
+  } catch (err) {
+    console.error("AI Categorization failed:", err);
+    return null;
+  }
+}
+
+export interface AuditResult {
+  id: string;
+  suggested: string;
+  reason: string;
+}
+
+export async function auditExpenses(expenses: any[], categories: string[]) {
+  const apiKey = localStorage.getItem("openrouter-api-key");
+  if (!apiKey || expenses.length === 0) return [];
+
+  const auditable = expenses.filter(e => e.note && e.note.trim());
+  if (auditable.length === 0) return [];
+
+  const list = auditable.map(e => ({ id: e.id, note: e.note, current: e.category }));
+
+  const prompt = `
+    Audit these expenses. Check if "current" category matches "note" based on: ${categories.join(", ")}.
+    Expenses: ${JSON.stringify(list)}
+    Return ONLY a JSON array of mismatched items: [{"id": "...", "suggested": "...", "reason": "..."}]. If correct, return [].
+  `;
+
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "LifeFlow Manager",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: DEFAULT_MODEL,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) return [];
+    const result = await response.json();
+    const text = result.choices[0].message.content.trim();
+    const jsonMatch = text.match(/\[.*\]/s);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : text) as AuditResult[];
+  } catch (err) {
+    console.error("AI Audit failed:", err);
+    return [];
+  }
+}

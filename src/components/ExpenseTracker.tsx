@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronDown } from "lucide-react";
 import type { Expense } from "@/hooks/useLifeData";
+import { cn } from "@/lib/utils";
 
 const categories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
 
@@ -17,6 +18,9 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
   const [category, setCategory] = useState(categories[0]);
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editNote, setEditNote] = useState("");
 
 
   const dayExpenses = expenses.filter(e => e.date === selectedDate);
@@ -28,6 +32,24 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
     onAdd(num, category, note, selectedDate);
     setAmount("");
     setNote("");
+  };
+
+  const startEditing = (e: Expense) => {
+    setEditingId(e.id);
+    setEditAmount(e.amount.toString());
+    setEditCategory(e.category);
+    setEditNote(e.note || "");
+  };
+
+  const handleUpdate = (id: string) => {
+    const num = parseFloat(editAmount);
+    if (!num || num <= 0) return;
+    onUpdate(id, {
+      amount: num,
+      category: editCategory,
+      note: editNote
+    });
+    setEditingId(null);
   };
 
   return (
@@ -59,36 +81,97 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
       {dayExpenses.length > 0 && (
         <ul className="space-y-2 pt-1">
           {dayExpenses.map(e => (
-            <li key={e.id} className="flex items-center gap-2 text-sm group">
-              <span className="w-2 h-2 rounded-full bg-section-expense/60 shrink-0" />
-              <span className="flex-1 truncate">{e.note || e.category}</span>
-              
-              {editingId === e.id ? (
-                <select 
-                  autoFocus
-                  value={e.category} 
-                  onChange={(evt) => {
-                    onUpdate(e.id, { category: evt.target.value });
-                    setEditingId(null);
-                  }}
-                  onBlur={() => setEditingId(null)}
-                  className="text-[10px] bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
-                >
-                  {categories.map(c => <option key={c}>{c}</option>)}
-                </select>
-              ) : (
-                <button 
-                  onClick={() => setEditingId(e.id)}
-                  className="text-muted-foreground text-[10px] hover:text-foreground transition-colors px-1 bg-muted/30 rounded"
-                >
+            <li key={e.id} className="flex flex-col rounded-lg bg-muted/20 border border-border/40 overflow-hidden group">
+              <div
+                className="flex items-center gap-2 p-3 cursor-pointer select-none hover:bg-muted/30 transition-colors"
+                onClick={() => editingId === e.id ? setEditingId(null) : startEditing(e)}
+              >
+                <span className="w-2 h-2 rounded-full bg-section-expense shrink-0" />
+                <span className="flex-1 truncate text-sm font-medium">{e.note || e.category}</span>
+                <span className="text-muted-foreground text-[10px] px-1.5 py-0.5 bg-muted/50 rounded-md border border-border/20">
                   {e.category}
-                </button>
-              )}
+                </span>
+                <span className="tabular-nums font-semibold text-sm">₹{e.amount.toFixed(2)}</span>
+                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
+              </div>
 
-              <span className="tabular-nums font-medium">₹{e.amount.toFixed(2)}</span>
-              <button onClick={() => onRemove(e.id)} className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all">
-                <X className="w-3.5 h-3.5" />
-              </button>
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                style={{ gridTemplateRows: editingId === e.id ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  <div className="p-3 pt-0 space-y-3">
+                    <div className="h-px bg-border/20 mx-1" />
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] text-muted-foreground font-medium px-1">Amount</label>
+                        <input
+                          type="number"
+                          value={editAmount}
+                          onChange={evt => setEditAmount(evt.target.value)}
+                          className="w-full bg-background rounded-md px-2 py-1.5 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                          autoFocus
+                          onClick={evt => evt.stopPropagation()}
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] text-muted-foreground font-medium px-1">Category</label>
+                        <select
+                          value={editCategory}
+                          onChange={evt => setEditCategory(evt.target.value)}
+                          className="w-full bg-background rounded-md px-2 py-1.5 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                          onClick={evt => evt.stopPropagation()}
+                        >
+                          {categories.map(c => <option key={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground font-medium px-1">Note</label>
+                      <input
+                        type="text"
+                        value={editNote}
+                        onChange={evt => setEditNote(evt.target.value)}
+                        placeholder="Note"
+                        className="w-full bg-background rounded-md px-2 py-1.5 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                        onClick={evt => evt.stopPropagation()}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                      <button
+                        onClick={(evt) => {
+                          evt.stopPropagation();
+                          onRemove(e.id);
+                        }}
+                        className="text-xs text-destructive hover:bg-destructive/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            setEditingId(null);
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            handleUpdate(e.id);
+                          }}
+                          className="px-4 py-1.5 text-xs font-semibold bg-section-expense text-primary-foreground rounded-md shadow-sm active:scale-95 transition-all"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

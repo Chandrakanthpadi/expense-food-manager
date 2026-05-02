@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
@@ -21,6 +21,10 @@ const Index = () => {
   const { settings } = useFeatureSettings();
   const todayStr = getISTDateStr();
   const [selectedDate, setSelectedDate] = useState(todayStr);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [selectedDate]);
 
   const isToday = selectedDate === todayStr;
   const displayDate = new Date(selectedDate + "T12:00:00");

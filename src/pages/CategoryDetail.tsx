@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, CalendarIcon, ChevronDown, Download,
@@ -69,21 +69,52 @@ function inRange(date: string, start: string, end: string) {
 
 const CategoryDetail = () => {
   const navigate = useNavigate();
-   const { category } = useParams<{ category: string }>();
+  const { category } = useParams<{ category: string }>();
+  const [searchParams] = useSearchParams();
+
+  const initialPeriod = searchParams.get("period") as FilterMode || "month";
+  const initialOffset = parseInt(searchParams.get("offset") || "0");
+
   const life = useLifeData();
   const { data } = life;
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editNote, setEditNote] = useState("");
+
+  const startEditing = (e: any) => {
+    setEditingId(e.id);
+    setEditAmount(e.amount.toString());
+    setEditCategory(e.category);
+    setEditNote(e.note || "");
+  };
+
+  const handleUpdate = (id: string) => {
+    const num = parseFloat(editAmount);
+    if (!num || num <= 0) return;
+    life.updateExpense(id, {
+      amount: num,
+      category: editCategory,
+      note: editNote
+    });
+    setEditingId(null);
+  };
 
 
-  const [filterMode, setFilterMode] = useState<FilterMode>("month");
-  const [monthOffset, setMonthOffset] = useState(0);
-  const [yearOffset, setYearOffset] = useState(0);
+  const [filterMode, setFilterMode] = useState<FilterMode>(initialPeriod);
+  const [monthOffset, setMonthOffset] = useState(initialPeriod === "month" ? initialOffset : 0);
+  const [yearOffset, setYearOffset] = useState(initialPeriod === "year" ? initialOffset : 0);
   const [customStart, setCustomStart] = useState<Date | undefined>();
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [pickingStart, setPickingStart] = useState(false);
   const [pickingEnd, setPickingEnd] = useState(false);
   const [exporting, setExporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top when period or filter changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [filterMode, monthOffset, yearOffset, customStart, customEnd]);
 
   const cat = category && CATEGORIES[category] ? CATEGORIES[category] : null;
 
@@ -379,34 +410,86 @@ const CategoryDetail = () => {
                 </div>
                 <div className="bg-card rounded-xl border border-border/40 divide-y divide-border/30 overflow-hidden">
                   {group.items.map(e => (
-                    <div key={e.id} className="px-4 py-2.5 flex items-center justify-between group">
-                      <div className="flex-1 min-w-0">
+                    <div key={e.id} className="flex flex-col group border-b border-border/10 last:border-0">
+                      <div
+                        className="px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => editingId === e.id ? setEditingId(null) : startEditing(e)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-semibold">{e.category}</span>
+                          {e.note && <span className="text-xs text-muted-foreground ml-2 truncate inline-block max-w-[150px] align-bottom">{e.note}</span>}
+                        </div>
                         <div className="flex items-center gap-2">
-                          {editingId === e.id ? (
-                            <select
-                              autoFocus
-                              value={e.category}
-                              onChange={(evt) => {
-                                life.updateExpense(e.id, { category: evt.target.value });
-                                setEditingId(null);
-                              }}
-                              onBlur={() => setEditingId(null)}
-                              className="text-sm font-medium bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
-                            >
-                              {expenseCategories.map(c => <option key={c}>{c}</option>)}
-                            </select>
-                          ) : (
-                            <span 
-                              onClick={() => setEditingId(e.id)}
-                              className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
-                            >
-                              {e.category}
-                            </span>
-                          )}
-                          {e.note && <span className="text-xs text-muted-foreground truncate">{e.note}</span>}
+                          <span className="text-sm font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
                         </div>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+
+                      <div
+                        className="grid transition-[grid-template-rows] duration-300 ease-in-out bg-muted/5"
+                        style={{ gridTemplateRows: editingId === e.id ? "1fr" : "0fr" }}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="px-4 pb-4 pt-0 space-y-3">
+                            <div className="h-px bg-border/20" />
+                            <div className="flex gap-3">
+                              <div className="flex-1 space-y-1.5">
+                                <label className="text-[10px] text-muted-foreground font-semibold px-1">Amount</label>
+                                <input
+                                  type="number"
+                                  value={editAmount}
+                                  onChange={evt => setEditAmount(evt.target.value)}
+                                  className="w-full bg-background rounded-md px-2.5 py-2 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                                  autoFocus
+                                  onClick={evt => evt.stopPropagation()}
+                                />
+                              </div>
+                              <div className="flex-1 space-y-1.5">
+                                <label className="text-[10px] text-muted-foreground font-semibold px-1">Category</label>
+                                <select
+                                  value={editCategory}
+                                  onChange={evt => setEditCategory(evt.target.value)}
+                                  className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                                  onClick={evt => evt.stopPropagation()}
+                                >
+                                  {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] text-muted-foreground font-semibold px-1">Note</label>
+                              <input
+                                type="text"
+                                value={editNote}
+                                onChange={evt => setEditNote(evt.target.value)}
+                                placeholder="Add a note..."
+                                className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                                onClick={evt => evt.stopPropagation()}
+                              />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-1">
+                              <button
+                                onClick={(evt) => {
+                                  evt.stopPropagation();
+                                  setEditingId(null);
+                                }}
+                                className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={(evt) => {
+                                  evt.stopPropagation();
+                                  handleUpdate(e.id);
+                                }}
+                                className="px-6 py-2 text-xs font-bold bg-section-expense text-primary-foreground rounded-lg active:scale-95 transition-all shadow-sm"
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
 

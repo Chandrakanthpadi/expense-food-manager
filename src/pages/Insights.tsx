@@ -1,12 +1,13 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
-  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle
+  ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle,
+  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { useFeatureSettings } from "@/hooks/useFeatureSettings";
-import { generateAIAnalysis } from "@/lib/aiService";
+import { generateAIAnalysis, auditExpenses, type AuditResult } from "@/lib/aiService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn, getISTDateStr } from "@/lib/utils";
@@ -301,7 +302,6 @@ interface SubBreakdownProps {
   settings: Record<string, boolean>;
 }
 
-
 function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowClick, settings }: SubBreakdownProps) {
   if (subPeriods.length === 0) return null;
   const rows = subPeriods.map(sp => ({ ...sp, ...getData(sp.start, sp.end) }));
@@ -366,7 +366,29 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
 }
 
 // Day detail view component
-function DayDetail({ date, data: lifeData, onBack }: { date: string; data: any; onBack: () => void }) {
+function DayDetail({ date, data: lifeData, onBack, onUpdate }: { date: string; data: any; onBack: () => void; onUpdate: (id: string, updates: any) => void }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editNote, setEditNote] = useState("");
+
+  const startEditing = (e: any) => {
+    setEditingId(e.id);
+    setEditAmount(e.amount.toString());
+    setEditCategory(e.category);
+    setEditNote(e.note || "");
+  };
+
+  const handleUpdate = (id: string) => {
+    const num = parseFloat(editAmount);
+    if (!num || num <= 0) return;
+    onUpdate(id, {
+      amount: num,
+      category: editCategory,
+      note: editNote
+    });
+    setEditingId(null);
+  };
   const d = new Date(date + "T12:00:00");
   const label = d.toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const expenses = lifeData.expenses.filter((e: any) => e.date === date);
@@ -411,15 +433,91 @@ function DayDetail({ date, data: lifeData, onBack }: { date: string; data: any; 
       {/* Expenses detail */}
       {expenses.length > 0 && (
         <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense">
-          {expenses.map((e: any) => (
-            <div key={e.id} className="flex justify-between items-center py-1.5 border-b border-border/20 last:border-0">
-              <div>
-                <span className="text-xs font-medium">{e.category}</span>
-                {e.note && <span className="text-[10px] text-muted-foreground ml-2">{e.note}</span>}
+          <div className="space-y-2">
+            {expenses.map((e: any) => (
+              <div key={e.id} className="flex flex-col rounded-lg bg-muted/20 border border-border/40 overflow-hidden group">
+                <div
+                  className="flex justify-between items-center p-2.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => editingId === e.id ? setEditingId(null) : startEditing(e)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-semibold">{e.category}</span>
+                    {e.note && <span className="text-[10px] text-muted-foreground ml-2 truncate inline-block max-w-[100px] align-bottom">{e.note}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
+                  </div>
+                </div>
+
+                <div
+                  className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                  style={{ gridTemplateRows: editingId === e.id ? "1fr" : "0fr" }}
+                >
+                  <div className="overflow-hidden">
+                    <div className="p-3 pt-0 space-y-3">
+                      <div className="h-px bg-border/20" />
+                      <div className="flex gap-2">
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[9px] text-muted-foreground font-medium px-1">Amount</label>
+                          <input
+                            type="number"
+                            value={editAmount}
+                            onChange={evt => setEditAmount(evt.target.value)}
+                            className="w-full bg-background rounded-md px-2 py-1.5 text-xs tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                            autoFocus
+                            onClick={evt => evt.stopPropagation()}
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[9px] text-muted-foreground font-medium px-1">Category</label>
+                          <select
+                            value={editCategory}
+                            onChange={evt => setEditCategory(evt.target.value)}
+                            className="w-full bg-background rounded-md px-2 py-1.5 text-xs outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                            onClick={evt => evt.stopPropagation()}
+                          >
+                            {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-muted-foreground font-medium px-1">Note</label>
+                        <input
+                          type="text"
+                          value={editNote}
+                          onChange={evt => setEditNote(evt.target.value)}
+                          placeholder="Note"
+                          className="w-full bg-background rounded-md px-2 py-1.5 text-xs outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                          onClick={evt => evt.stopPropagation()}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            setEditingId(null);
+                          }}
+                          className="px-3 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            handleUpdate(e.id);
+                          }}
+                          className="px-4 py-1.5 text-[10px] font-semibold bg-section-expense text-primary-foreground rounded-md active:scale-95 transition-all shadow-sm"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span className="text-xs font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </Section>
       )}
 
@@ -528,6 +626,28 @@ function CategoryExpensesDetail({
   onUpdate: (id: string, updates: any) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editNote, setEditNote] = useState("");
+
+  const startEditing = (e: any) => {
+    setEditingId(e.id);
+    setEditAmount(e.amount.toString());
+    setEditCategory(e.category);
+    setEditNote(e.note || "");
+  };
+
+  const handleUpdate = (id: string) => {
+    const num = parseFloat(editAmount);
+    if (!num || num <= 0) return;
+    onUpdate(id, {
+      amount: num,
+      category: editCategory,
+      note: editNote
+    });
+    setEditingId(null);
+  };
+
   const expenses = lifeData.expenses.filter((e: any) => e.category === category && inRange(e.date, start, end))
     .sort((a: any, b: any) => b.date.localeCompare(a.date));
   const total = expenses.reduce((s: number, e: any) => s + e.amount, 0);
@@ -544,36 +664,91 @@ function CategoryExpensesDetail({
 
       <div className="bg-card rounded-xl border border-border/60 divide-y divide-border/20 overflow-hidden">
         {expenses.map((e: any) => (
-          <div key={e.id} className="px-4 py-3 flex justify-between items-center group">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium">{new Date(e.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                {e.note && <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{e.note}</span>}
-
-                {editingId === e.id ? (
-                  <select
-                    autoFocus
-                    value={e.category}
-                    onChange={(evt) => {
-                      onUpdate(e.id, { category: evt.target.value });
-                      setEditingId(null);
-                    }}
-                    onBlur={() => setEditingId(null)}
-                    className="text-[9px] bg-muted rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-ring/30"
-                  >
-                    {expenseCategories.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                ) : (
-                  <button
-                    onClick={() => setEditingId(e.id)}
-                    className="text-[9px] text-muted-foreground hover:text-foreground bg-muted/40 px-1 rounded transition-colors"
-                  >
+          <div key={e.id} className="group">
+            <div
+              className="px-4 py-3.5 flex justify-between items-center cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => editingId === e.id ? setEditingId(null) : startEditing(e)}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">{new Date(e.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {e.note && <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{e.note}</span>}
+                  <span className="text-[9px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/10">
                     {e.category}
-                  </button>
-                )}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
               </div>
             </div>
-            <span className="text-xs font-semibold tabular-nums">₹{e.amount.toFixed(2)}</span>
+
+            <div
+              className="grid transition-[grid-template-rows] duration-300 ease-in-out bg-muted/5"
+              style={{ gridTemplateRows: editingId === e.id ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <div className="px-4 pb-4 pt-0 space-y-3">
+                  <div className="h-px bg-border/20" />
+                  <div className="flex gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-[10px] text-muted-foreground font-semibold px-1">Amount</label>
+                      <input
+                        type="number"
+                        value={editAmount}
+                        onChange={evt => setEditAmount(evt.target.value)}
+                        className="w-full bg-background rounded-md px-2.5 py-2 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                        autoFocus
+                        onClick={evt => evt.stopPropagation()}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-[10px] text-muted-foreground font-semibold px-1">Category</label>
+                      <select
+                        value={editCategory}
+                        onChange={evt => setEditCategory(evt.target.value)}
+                        className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                        onClick={evt => evt.stopPropagation()}
+                      >
+                        {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-muted-foreground font-semibold px-1">Note</label>
+                    <input
+                      type="text"
+                      value={editNote}
+                      onChange={evt => setEditNote(evt.target.value)}
+                      placeholder="Add a note..."
+                      className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                      onClick={evt => evt.stopPropagation()}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-3 pt-1">
+                    <button
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        setEditingId(null);
+                      }}
+                      className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        handleUpdate(e.id);
+                      }}
+                      className="px-6 py-2 text-xs font-bold bg-section-expense text-primary-foreground rounded-lg active:scale-95 transition-all shadow-sm"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
         {expenses.length === 0 && (
@@ -583,6 +758,102 @@ function CategoryExpensesDetail({
     </div>
   );
 }
+const SpendingCalendar = ({ data, activeStart, onDayClick }: { data: any; activeStart: string; onDayClick: (date: string) => void }) => {
+  const d = new Date(activeStart + "T12:00:00");
+  const year = d.getFullYear();
+  const month = d.getMonth();
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = getISTDateStr();
+
+  const spendingByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    data.expenses.forEach((e: any) => {
+      const current = map.get(e.date) || 0;
+      map.set(e.date, current + e.amount);
+    });
+    return map;
+  }, [data.expenses]);
+
+  const avg = useMemo(() => {
+    const expenses = data.expenses.filter((e: any) => {
+      const d = new Date(e.date + "T12:00:00");
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+    if (expenses.length === 0) return 0;
+    const total = expenses.reduce((s: number, e: any) => s + e.amount, 0);
+    return total / daysInMonth;
+  }, [data.expenses, year, month, daysInMonth]);
+
+  const getHeatmapStyles = (spent: number) => {
+    if (spent === 0) return "bg-card";
+    const ratio = spent / avg;
+
+    if (ratio > 1.0) return "bg-rose-50/80 text-rose-900"; // Single light red for overspending
+    return "bg-card"; // Neutral for others
+  };
+
+  const monthName = d.toLocaleDateString("en", { month: "long", year: "numeric" });
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <div className="bg-card rounded-xl border border-border/60 overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-muted/10">
+        <h2 className="text-sm font-bold text-foreground">{monthName}</h2>
+        {avg > 0 && (
+          <div className="text-right">
+            <span className="text-[10px] text-muted-foreground mr-1.5 font-medium">Daily Avg</span>
+            <span className="text-sm font-bold tabular-nums text-foreground">₹{avg.toFixed(0)}</span>
+          </div>
+        )}
+      </div>
+      <div className="p-2">
+        <div className="grid grid-cols-7 gap-px bg-border/30 rounded-lg overflow-hidden border border-border/30">
+          {dayNames.map(d => (
+            <div key={d} className="bg-muted/50 py-1.5 text-center text-[9px] font-black text-muted-foreground uppercase tracking-tighter">
+              {d}
+            </div>
+          ))}
+          {Array.from({ length: firstDay }).map((_, i) => (
+            <div key={`empty-${i}`} className="bg-card/50 min-h-[48px]" />
+          ))}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const spent = spendingByDay.get(dateStr) || 0;
+            const isToday = dateStr === todayStr;
+
+            return (
+              <div
+                key={day}
+                onClick={() => onDayClick(dateStr)}
+                className={cn(
+                  "min-h-[48px] p-1 flex flex-col items-center justify-start relative transition-all hover:opacity-80 cursor-pointer active:scale-95",
+                  getHeatmapStyles(spent),
+                  isToday && "ring-2 ring-primary/40 z-10"
+                )}
+              >
+                <span className={cn(
+                  "text-[12px] font-medium tabular-nums mb-auto",
+                  isToday ? "text-primary" : "text-foreground"
+                )}>
+                  {day}
+                </span>
+                {spent > 0 && (
+                  <span className="text-[11px] font-medium leading-none pb-0.5 tracking-tighter text-foreground">
+                    ₹{spent.toFixed(0)}
+                  </span>
+                )}
+                {isToday && <div className="absolute top-1 right-1 w-1 h-1 bg-primary rounded-full animate-pulse" />}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 
 
@@ -606,6 +877,8 @@ const Insights = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditResults, setAuditResults] = useState<AuditResult[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handleAIAnalysis = async () => {
@@ -631,7 +904,35 @@ const Insights = () => {
       setIsAnalyzing(false);
     }
   };
+
+  const handleAudit = async () => {
+    setIsAuditing(true);
+    setAuditResults([]);
+    try {
+      const currentExpenses = data.expenses.filter(e => inRange(e.date, activeStart, activeEnd));
+      const results = await auditExpenses(currentExpenses, expenseCategories);
+      setAuditResults(results);
+    } catch (err) {
+      console.error("Audit failed:", err);
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const applySuggestion = (expenseId: string, suggested: string) => {
+    life.updateExpense(expenseId, { category: suggested });
+    setAuditResults(prev => prev.filter(r => r.id !== expenseId));
+  };
+
+  const discardSuggestion = (expenseId: string) => {
+    setAuditResults(prev => prev.filter(r => r.id !== expenseId));
+  };
   const [drillStack, setDrillStack] = useState<DrillLevel[]>([]);
+
+  // Scroll to top when drilling down/up
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [drillStack.length]);
   const [start, end] = getDateRange(period, offset);
   const daysInRange = getDaysInRange(start, end);
   const todayStr = getISTDateStr();
@@ -762,7 +1063,7 @@ const Insights = () => {
     }));
 
     return {
-      expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length, dailySpend },
+      expenses: { totalSpent, avgPerDay, categoryBreakdown, maxCatAmount, highestDay, count: expenses.length, dailySpend, items: expenses },
       food: { totalCals, mealsLogged, avgCalsPerDay, mealBreakdown, breakfastCount, lunchCount, dinnerCount, snackCount, allThreeMeals, daysInPeriod: activeDaysPassed, dailyCals },
       exercise: { totalMinutes, sessions, avgPerSession, activeDays, activityBreakdown, dailyExercise },
       habits: { habitStats, totalHabitDays },
@@ -809,18 +1110,89 @@ const Insights = () => {
       }
 
       const summary = [];
-      if (settings.expenses) summary.push({ label: "Total Spent", value: `Total: Rs ${insights.expenses.totalSpent.toFixed(2)}` });
+      if (settings.expenses) summary.push({ label: "Total Spent", value: `Rs ${insights.expenses.totalSpent.toFixed(0)}` });
       if (settings.food) summary.push({ label: "Total Calories", value: `${insights.food.totalCals.toLocaleString()} cal` });
       if (settings.exercise) summary.push({ label: "Total Exercise", value: `${insights.exercise.totalMinutes} min` });
       if (settings.tasks) summary.push({ label: "Task Completion", value: `${Math.round(insights.tasks.completionRate)}%` });
       if (settings.journal) summary.push({ label: "Journal Entries", value: `${insights.journal.count} entries` });
 
+      let calendarData = undefined;
+      if (period === "month" && settings.expenses) {
+        const d = new Date(activeStart + "T12:00:00");
+        const year = d.getFullYear();
+        const month = d.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const spendingByDay = new Map<string, number>();
+        data.expenses.forEach((e: any) => {
+          if (inRange(e.date, activeStart, activeEnd)) {
+            const current = spendingByDay.get(e.date) || 0;
+            spendingByDay.set(e.date, current + e.amount);
+          }
+        });
+
+        calendarData = {
+          monthName: periodLabel(period, offset),
+          firstDay,
+          daysInMonth,
+          spendingByDay,
+          year,
+          month,
+          avgPerDay: insights.expenses.avgPerDay
+        };
+      }
+
+      if (settings.expenses && insights.expenses.items.length > 0) {
+        // Group items by date for better organization
+        const groupedItems: (string | number)[][] = [];
+        const itemsByDate = new Map<string, any[]>();
+
+        insights.expenses.items.forEach((e: any) => {
+          const group = itemsByDate.get(e.date) || [];
+          group.push(e);
+          itemsByDate.set(e.date, group);
+        });
+
+        // Sort dates descending (newest first)
+        const sortedDates = Array.from(itemsByDate.keys()).sort((a, b) => b.localeCompare(a));
+
+        sortedDates.forEach(date => {
+          const dayItems = itemsByDate.get(date)!;
+          const dayTotal = dayItems.reduce((sum, e) => sum + e.amount, 0);
+
+          // Add Date Header Row with Daily Total
+          const d = new Date(date + "T12:00:00");
+          const dateLabel = d.toLocaleDateString("en-IN", {
+            weekday: 'long', day: "numeric", month: "long", year: "numeric"
+          });
+          groupedItems.push([dateLabel.toUpperCase(), `Rs ${dayTotal.toFixed(0)}`]);
+
+          // Add transactions for this date
+          dayItems.forEach(e => {
+            // Match the UI format: Category + Note together
+            const itemLabel = e.note ? `${e.category} - ${e.note}` : e.category;
+            groupedItems.push([
+              itemLabel,
+              `Rs ${e.amount.toFixed(2)}`
+            ]);
+          });
+        });
+
+        tables.push({
+          title: "Full Transaction History",
+          head: ["ITEM / DESCRIPTION", "AMOUNT"],
+          body: groupedItems
+        });
+      }
+
       const reportData: PdfReportData = {
         fileName: createPdfFileName("lifeflow-insights", periodLabel(period, offset)),
-        title: "Lifeflow Insights",
-        subtitle: `Dashboard export for ${periodLabel(period, offset)}`,
-        themeColor: [33, 100, 200],
+        title: "LifeFlow Insights Report",
+        subtitle: `Data overview for ${periodLabel(period, offset)}`,
+        themeColor: [40, 40, 40],
         summary,
+        calendar: calendarData,
         tables,
       };
 
@@ -979,12 +1351,85 @@ const Insights = () => {
             </div>
           </div>
 
+          {/* Smart Auditor Section */}
+          <div className="bg-card rounded-xl border border-border/60 overflow-hidden mb-4">
+            <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-amber-50/5">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <h2 className="text-sm font-semibold">Smart Auditor</h2>
+              </div>
+              <button
+                onClick={handleAudit}
+                disabled={isAuditing}
+                className="text-xs font-medium text-amber-600 hover:bg-amber-500/10 px-2 py-1 rounded-md transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                Scan for Anomalies
+              </button>
+            </div>
+            <div className="p-4">
+              {auditResults.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                    <Info className="w-3 h-3" /> {auditResults.length} potential mismatches found
+                  </p>
+                  {auditResults.map(result => {
+                    const expense = data.expenses.find(e => e.id === result.id);
+                    if (!expense) return null;
+                    return (
+                      <div key={result.id} className="bg-amber-500/[0.03] border border-amber-200/40 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 pr-4">
+                            <p className="text-xs font-bold text-foreground">"{expense.note}"</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Current: <span className="line-through">{expense.category}</span> → Suggestion: <span className="text-amber-600 font-bold">{result.suggested}</span>
+                            </p>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <button 
+                              onClick={() => discardSuggestion(result.id)}
+                              className="text-[10px] font-bold text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+                            >
+                              Discard
+                            </button>
+                            <button 
+                              onClick={() => applySuggestion(result.id, result.suggested)}
+                              className="bg-amber-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-amber-700 transition-colors flex items-center gap-1 shadow-sm"
+                            >
+                              <Check className="w-3 h-3" /> Apply
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-amber-800/70 italic leading-relaxed border-t border-amber-200/20 pt-2">
+                          "{result.reason}"
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : !isAuditing && (
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted-foreground italic">No categorization anomalies detected in the current range.</p>
+                </div>
+              )}
+              {isAuditing && (
+                <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                  <div className="w-6 h-6 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                  <p className="text-[10px] text-muted-foreground animate-pulse">Auditing your descriptions...</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Day or Category detail view */}
           {activeLevel === "day" ? (
             <DayDetail
               date={activeStart}
               data={data}
               onBack={() => setDrillStack(s => s.slice(0, -1))}
+              onUpdate={life.updateExpense}
             />
           ) : activeLevel === "expense-category" ? (
             <CategoryExpensesDetail
@@ -997,6 +1442,15 @@ const Insights = () => {
             />
           ) : (
             <>
+              {/* Spending Calendar View */}
+              {activeLevel === "month" && settings.expenses && (
+                <SpendingCalendar
+                  data={data}
+                  activeStart={activeStart}
+                  onDayClick={(date) => setDrillStack(s => [...s, { label: date, start: date, end: date, level: "day" }])}
+                />
+              )}
+
               {/* Sub-period breakdown table */}
               <SubBreakdown
                 subPeriods={subPeriods}
@@ -1015,7 +1469,12 @@ const Insights = () => {
 
               {/* ── Expenses ── */}
               {settings.expenses && (
-                <Section title="Expenses" icon={<DollarSign className="w-4 h-4" />} colorClass="bg-section-expense" onTitleClick={() => navigate("/insights/expenses")}>
+                <Section
+                  title="Expenses"
+                  icon={<DollarSign className="w-4 h-4" />}
+                  colorClass="bg-section-expense"
+                  onTitleClick={() => navigate(`/insights/expenses?period=${period}&offset=${offset}`)}
+                >
                   <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
                   <InsightChart data={insights.expenses.dailySpend} color="var(--section-expense)" />
                   <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
