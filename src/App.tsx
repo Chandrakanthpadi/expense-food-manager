@@ -10,6 +10,7 @@ import Insights from "./pages/Insights.tsx";
 import Settings from "./pages/Settings.tsx";
 import CategoryDetail from "./pages/CategoryDetail.tsx";
 import Auth from "./pages/Auth.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -38,6 +39,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<Auth />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
     <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
     <Route path="/insights/:category" element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
