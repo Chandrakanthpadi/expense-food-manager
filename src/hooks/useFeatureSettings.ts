@@ -9,6 +9,7 @@ export interface FeatureSettings {
   habits: boolean;
   tasks: boolean;
   journal: boolean;
+  [key: string]: boolean;
 }
 
 const STORAGE_KEY = "lifeflow-feature-settings";
