@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage: {
+        Row: {
+          created_at: string
+          id: string
+          request_count: number
+          updated_at: string
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          updated_at?: string
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          updated_at?: string
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       exercise: {
         Row: {
           activity: string
