@@ -70,37 +70,11 @@ const Settings = () => {
 
         {/* AI Settings */}
         <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40">
-            <h2 className="text-sm font-semibold">AI Settings</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Configure AI insights via OpenRouter</p>
-          </div>
-          <div className="px-4 py-4 space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="api-key" className="text-xs font-medium text-muted-foreground">
-                OpenRouter API Key
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder="sk-or-v1-..."
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="text-sm bg-muted/30"
-                />
-                {apiKey && (
-                  <button
-                    onClick={() => setApiKey("")}
-                    className="px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-md transition-all"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Get your key at <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-primary hover:underline">openrouter.ai</a>. Keys are stored locally on your device.
-              </p>
-            </div>
+          <div className="px-4 py-3">
+            <h2 className="text-sm font-semibold">AI Insights</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Powered by a free model. Each account is limited to <span className="font-medium text-foreground">10 AI requests per month</span>.
+            </p>
           </div>
         </div>
 
