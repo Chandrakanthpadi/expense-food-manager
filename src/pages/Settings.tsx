@@ -1,7 +1,6 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, Upload, RotateCcw, LogOut } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { useLifeData } from "@/hooks/useLifeData";
 
 import { useAuth } from "@/hooks/useAuth";
