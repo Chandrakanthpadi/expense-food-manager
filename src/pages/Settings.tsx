@@ -27,11 +27,6 @@ const Settings = () => {
   const { signOut, user } = useAuth();
   const { settings, toggleFeature } = useFeatureSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("openrouter-api-key") || "");
-
-  useEffect(() => {
-    localStorage.setItem("openrouter-api-key", apiKey);
-  }, [apiKey]);
 
   return (
     <div className="min-h-screen bg-background">
