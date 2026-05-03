@@ -1210,7 +1210,13 @@ const Insights = () => {
         {/* Header */}
         <header className="flex items-center gap-3 pb-1">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => {
+              if (drillStack.length > 0) {
+                setDrillStack(s => s.slice(0, -1));
+              } else {
+                navigate("/");
+              }
+            }}
             className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted hover:bg-muted-foreground/10 active:scale-95 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -1295,7 +1301,9 @@ const Insights = () => {
 
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {/* AI Analysis Section */}
+          {activeLevel === "month" && (
+            <>
+              {/* AI Analysis Section */}
           <div className="bg-card rounded-xl border border-border/60 overflow-hidden mb-4">
             <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1422,6 +1430,8 @@ const Insights = () => {
               )}
             </div>
           </div>
+            </>
+          )}
 
           {/* Day or Category detail view */}
           {activeLevel === "day" ? (
