@@ -29,10 +29,10 @@ export async function exportReportToPdf(data: PdfReportData) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const primaryColor = [30, 30, 30]; 
-  const secondaryColor = [110, 110, 110];
-  const dividerColor = [220, 220, 220];
-  const headerBgColor = [245, 245, 245];
+  const primaryColor: [number, number, number] = [30, 30, 30];
+  const secondaryColor: [number, number, number] = [110, 110, 110];
+  const dividerColor: [number, number, number] = [220, 220, 220];
+  const headerBgColor: [number, number, number] = [245, 245, 245];
 
   let currentY = 25;
 
