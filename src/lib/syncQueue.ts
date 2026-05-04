@@ -14,10 +14,7 @@ export type SyncOp =
   | { kind: "delete"; table: string; match: Record<string, any> }
   | { kind: "upsert"; table: string; values: Record<string, any>; onConflict?: string };
 
-export interface QueuedOp extends SyncOp {
-  id: string;
-  ts: number;
-}
+export type QueuedOp = SyncOp & { id: string; ts: number };
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 function openDb(): Promise<IDBDatabase> {
