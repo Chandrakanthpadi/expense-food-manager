@@ -14,9 +14,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json({ error: "Unauthorized" }, 401);
-    }
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -25,17 +23,13 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData.user) {
-      return json({ error: "Unauthorized" }, 401);
-    }
+    if (userErr || !userData.user) return json({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const { mode, prompt } = await req.json();
-    if (!prompt || typeof prompt !== "string") {
-      return json({ error: "Missing prompt" }, 400);
-    }
+    const body = await req.json().catch(() => ({}));
+    const { mode, prompt, periodLabel } = body ?? {};
 
-    // Check usage for current month
+    // Compute current month usage (used by all modes)
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -47,6 +41,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const currentCount = usage?.request_count ?? 0;
+
+    // status mode: just return usage info
+    if (mode === "status") {
+      return json({ used: currentCount, limit: MONTHLY_LIMIT });
+    }
+
+    if (!prompt || typeof prompt !== "string") {
+      return json({ error: "Missing prompt" }, 400);
+    }
+
     if (currentCount >= MONTHLY_LIMIT) {
       return json({
         error: `Monthly limit reached (${MONTHLY_LIMIT} requests). Resets next month.`,
@@ -83,14 +87,18 @@ Deno.serve(async (req) => {
 
     // Increment usage
     if (usage) {
-      await supabase
-        .from("ai_usage")
-        .update({ request_count: currentCount + 1 })
-        .eq("id", usage.id);
+      await supabase.from("ai_usage").update({ request_count: currentCount + 1 }).eq("id", usage.id);
     } else {
-      await supabase
-        .from("ai_usage")
-        .insert({ user_id: userId, year_month: yearMonth, request_count: 1 });
+      await supabase.from("ai_usage").insert({ user_id: userId, year_month: yearMonth, request_count: 1 });
+    }
+
+    // Persist insight reports (analysis mode only). Skip audit/categorize.
+    if (mode === "analysis" && content) {
+      await supabase.from("ai_insights_history").insert({
+        user_id: userId,
+        period_label: periodLabel || "Untitled period",
+        content,
+      });
     }
 
     return json({

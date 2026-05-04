@@ -9,9 +9,9 @@ export interface AIAnalysisRequest {
   endDate: string;
 }
 
-async function callAI(prompt: string, mode: string): Promise<string> {
+async function callAI(prompt: string, mode: string, extra: Record<string, unknown> = {}): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-insights", {
-    body: { prompt, mode },
+    body: { prompt, mode, ...extra },
   });
 
   if (error) {
