@@ -28,7 +28,7 @@ export function useLifeData() {
     setData(next);
   }, []);
 
-  // Load all data from Supabase
+  // Load: IndexedDB first (works offline), then refresh from Supabase if online
   useEffect(() => {
     if (!user) {
       commitData(createEmptyLifeData());
@@ -36,40 +36,60 @@ export function useLifeData() {
       return;
     }
 
-    const load = async () => {
-      const [expenses, food, mealChecks, exercise, habits, tasks, journal] = await Promise.all([
-        supabase.from("expenses").select("id, amount, category, note, date").order("created_at", { ascending: false }),
-        supabase.from("food").select("id, meal, items, calories, date").order("created_at", { ascending: false }),
-        supabase.from("meal_checks").select("id, date, breakfast, lunch, dinner, snack"),
-        supabase.from("exercise").select("id, activity, duration, date").order("created_at", { ascending: false }),
-        supabase.from("habits").select("id, name, completed_dates").order("created_at", { ascending: false }),
-        supabase.from("tasks").select("id, text, done, date").order("created_at", { ascending: true }),
-        supabase.from("journal").select("id, content, mood, date").order("created_at", { ascending: false }),
-      ]);
+    let cancelled = false;
 
-      commitData(mergeLifeData({
-        expenses: expenses.data ?? [],
-        food: food.data ?? [],
-        mealChecks: (mealChecks.data ?? []).map(m => ({
-          date: m.date,
-          breakfast: m.breakfast,
-          lunch: m.lunch,
-          dinner: m.dinner,
-          snack: m.snack,
-        })),
-        exercise: exercise.data ?? [],
-        habits: (habits.data ?? []).map(h => ({
-          id: h.id,
-          name: h.name,
-          completedDates: h.completed_dates ?? [],
-        })),
-        tasks: tasks.data ?? [],
-        journal: journal.data ?? [],
-      }));
+    const load = async () => {
+      // 1) Hydrate from local cache immediately
+      try {
+        const local = await loadLifeDataFromDb();
+        if (!cancelled) commitData(local);
+      } catch (e) {
+        console.warn("Local cache load failed", e);
+      }
+
+      // 2) If online, fetch from server and refresh cache
+      if (!navigator.onLine) {
+        loadedRef.current = true;
+        return;
+      }
+
+      try {
+        const [expenses, food, mealChecks, exercise, habits, tasks, journal] = await Promise.all([
+          supabase.from("expenses").select("id, amount, category, note, date").order("created_at", { ascending: false }),
+          supabase.from("food").select("id, meal, items, calories, date").order("created_at", { ascending: false }),
+          supabase.from("meal_checks").select("id, date, breakfast, lunch, dinner, snack"),
+          supabase.from("exercise").select("id, activity, duration, date").order("created_at", { ascending: false }),
+          supabase.from("habits").select("id, name, completed_dates").order("created_at", { ascending: false }),
+          supabase.from("tasks").select("id, text, done, date").order("created_at", { ascending: true }),
+          supabase.from("journal").select("id, content, mood, date").order("created_at", { ascending: false }),
+        ]);
+
+        const fresh = mergeLifeData({
+          expenses: expenses.data ?? [],
+          food: food.data ?? [],
+          mealChecks: (mealChecks.data ?? []).map(m => ({
+            date: m.date, breakfast: m.breakfast, lunch: m.lunch, dinner: m.dinner, snack: m.snack,
+          })),
+          exercise: exercise.data ?? [],
+          habits: (habits.data ?? []).map(h => ({
+            id: h.id, name: h.name, completedDates: h.completed_dates ?? [],
+          })),
+          tasks: tasks.data ?? [],
+          journal: journal.data ?? [],
+        });
+
+        if (!cancelled) {
+          commitData(fresh);
+          await replaceLifeDataInDb(fresh);
+        }
+      } catch (e) {
+        console.warn("Server fetch failed, keeping local cache", e);
+      }
       loadedRef.current = true;
     };
 
     load();
+    return () => { cancelled = true; };
   }, [user, commitData]);
 
   const uid = () => crypto.randomUUID();
