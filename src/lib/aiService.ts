@@ -90,7 +90,7 @@ Generate a structured personal performance report:
 Use **bold** for key numbers. Use ₹ for currency. Be encouraging but honest.
 `;
 
-  return callAI(prompt, "analysis");
+  return callAI(prompt, "analysis", { periodLabel });
 }
 
 export async function categorizeExpense(note: string, categories: string[]) {
