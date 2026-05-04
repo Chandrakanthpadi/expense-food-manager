@@ -92,6 +92,15 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                   {e.category}
                 </span>
                 <span className="tabular-nums font-semibold text-sm">₹{e.amount.toFixed(2)}</span>
+                <button
+                  onClick={(evt) => {
+                    evt.stopPropagation();
+                    onRemove(e.id);
+                  }}
+                  className="p-1 text-muted-foreground hover:text-destructive transition-colors ml-1 active:scale-90"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
                 <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
               </div>
 
@@ -110,7 +119,6 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                           value={editAmount}
                           onChange={evt => setEditAmount(evt.target.value)}
                           className="w-full bg-background rounded-md px-2 py-1.5 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
-                          autoFocus
                           onClick={evt => evt.stopPropagation()}
                         />
                       </div>
@@ -137,17 +145,7 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                         onClick={evt => evt.stopPropagation()}
                       />
                     </div>
-                    <div className="flex justify-between items-center pt-1">
-                      <button
-                        onClick={(evt) => {
-                          evt.stopPropagation();
-                          onRemove(e.id);
-                        }}
-                        className="text-xs text-destructive hover:bg-destructive/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        Remove
-                      </button>
+                    <div className="flex justify-end items-center pt-1">
                       <div className="flex gap-2">
                         <button
                           onClick={(evt) => {

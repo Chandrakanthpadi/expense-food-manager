@@ -366,7 +366,7 @@ function SubBreakdown({ subPeriods, getData, colorClass, breakdownTitle, onRowCl
 }
 
 // Day detail view component
-function DayDetail({ date, data: lifeData, onBack, onUpdate }: { date: string; data: any; onBack: () => void; onUpdate: (id: string, updates: any) => void }) {
+function DayDetail({ date, data: lifeData, onBack, onUpdate, onRemove }: { date: string; data: any; onBack: () => void; onUpdate: (id: string, updates: any) => void; onRemove: (id: string) => void }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -446,6 +446,15 @@ function DayDetail({ date, data: lifeData, onBack, onUpdate }: { date: string; d
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                    <button
+                      onClick={(evt) => {
+                        evt.stopPropagation();
+                        onRemove(e.id);
+                      }}
+                      className="p-1 text-muted-foreground hover:text-destructive transition-colors ml-1 active:scale-90"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                     <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
                   </div>
                 </div>
@@ -465,7 +474,6 @@ function DayDetail({ date, data: lifeData, onBack, onUpdate }: { date: string; d
                             value={editAmount}
                             onChange={evt => setEditAmount(evt.target.value)}
                             className="w-full bg-background rounded-md px-2 py-1.5 text-xs tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
-                            autoFocus
                             onClick={evt => evt.stopPropagation()}
                           />
                         </div>
@@ -616,7 +624,8 @@ function CategoryExpensesDetail({
   end,
   data: lifeData,
   onBack,
-  onUpdate
+  onUpdate,
+  onRemove
 }: {
   category: string;
   start: string;
@@ -624,6 +633,7 @@ function CategoryExpensesDetail({
   data: any;
   onBack: () => void;
   onUpdate: (id: string, updates: any) => void;
+  onRemove: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -680,6 +690,15 @@ function CategoryExpensesDetail({
               </div>
               <div className="flex items-center gap-2.5">
                 <span className="text-sm font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                <button
+                  onClick={(evt) => {
+                    evt.stopPropagation();
+                    onRemove(e.id);
+                  }}
+                  className="p-1 text-muted-foreground hover:text-destructive transition-colors ml-1 active:scale-90"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
                 <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
               </div>
             </div>
@@ -699,7 +718,6 @@ function CategoryExpensesDetail({
                         value={editAmount}
                         onChange={evt => setEditAmount(evt.target.value)}
                         className="w-full bg-background rounded-md px-2.5 py-2 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
-                        autoFocus
                         onClick={evt => evt.stopPropagation()}
                       />
                     </div>
@@ -1440,6 +1458,7 @@ const Insights = () => {
               data={data}
               onBack={() => setDrillStack(s => s.slice(0, -1))}
               onUpdate={life.updateExpense}
+              onRemove={life.removeExpense}
             />
           ) : activeLevel === "expense-category" ? (
             <CategoryExpensesDetail
@@ -1449,6 +1468,7 @@ const Insights = () => {
               data={data}
               onBack={() => setDrillStack(s => s.slice(0, -1))}
               onUpdate={life.updateExpense}
+              onRemove={life.removeExpense}
             />
           ) : (
             <>

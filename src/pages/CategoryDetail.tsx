@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, DollarSign, UtensilsCrossed, Dumbbell, Target,
-  ListTodo, BookOpen, CalendarIcon, ChevronDown, Download,
+  ListTodo, BookOpen, CalendarIcon, ChevronDown, Download, X,
 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { getISTDateStr } from "@/lib/utils";
@@ -421,6 +421,15 @@ const CategoryDetail = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold tabular-nums">₹{e.amount.toFixed(2)}</span>
+                          <button
+                            onClick={(evt) => {
+                              evt.stopPropagation();
+                              life.removeExpense(e.id);
+                            }}
+                            className="p-1 text-muted-foreground hover:text-destructive transition-colors ml-1 active:scale-90"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", editingId === e.id && "rotate-180")} />
                         </div>
                       </div>
@@ -440,7 +449,6 @@ const CategoryDetail = () => {
                                   value={editAmount}
                                   onChange={evt => setEditAmount(evt.target.value)}
                                   className="w-full bg-background rounded-md px-2.5 py-2 text-sm tabular-nums outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
-                                  autoFocus
                                   onClick={evt => evt.stopPropagation()}
                                 />
                               </div>
