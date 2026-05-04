@@ -13,6 +13,7 @@ import { TaskList } from "@/components/TaskList";
 import { JournalSection } from "@/components/JournalSection";
 import { MiniCalendar } from "@/components/MiniCalendar";
 import { SummaryStats } from "@/components/SummaryStats";
+import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { getISTDateStr } from "@/lib/utils";
 
 const Index = () => {
@@ -46,7 +47,8 @@ const Index = () => {
               {!isToday && <span className="ml-1.5 text-primary text-xs font-medium">(past)</span>}
             </p>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 items-center">
+            <SyncStatusBadge />
             <button
               onClick={() => navigate("/insights")}
               className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted rounded-md active:scale-95 transition-all"
