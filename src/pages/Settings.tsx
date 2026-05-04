@@ -1,10 +1,13 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Upload, RotateCcw, LogOut } from "lucide-react";
+import { ArrowLeft, Download, Upload, RotateCcw, LogOut, Sparkles, ChevronDown, Trash2 } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureSettings, type FeatureKey } from "@/hooks/useFeatureSettings";
+import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
