@@ -9,9 +9,9 @@ export interface AIAnalysisRequest {
   endDate: string;
 }
 
-async function callAI(prompt: string, mode: string): Promise<string> {
+async function callAI(prompt: string, mode: string, extra: Record<string, unknown> = {}): Promise<string> {
   const { data, error } = await supabase.functions.invoke("ai-insights", {
-    body: { prompt, mode },
+    body: { prompt, mode, ...extra },
   });
 
   if (error) {
@@ -90,7 +90,7 @@ Generate a structured personal performance report:
 Use **bold** for key numbers. Use ₹ for currency. Be encouraging but honest.
 `;
 
-  return callAI(prompt, "analysis");
+  return callAI(prompt, "analysis", { periodLabel });
 }
 
 export async function categorizeExpense(note: string, categories: string[]) {

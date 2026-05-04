@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights_history: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          period_label: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          period_label: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          period_label?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string
@@ -255,6 +279,30 @@ export type Database = {
           done?: boolean
           id?: string
           text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          features: Json
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          features?: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          features?: Json
+          id?: string
           updated_at?: string
           user_id?: string
         }
