@@ -23,12 +23,50 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface InsightRow {
+  id: string;
+  period_label: string;
+  content: string;
+  created_at: string;
+}
+
+const MONTHLY_LIMIT = 10;
+
 const Settings = () => {
   const navigate = useNavigate();
   const life = useLifeData();
   const { signOut, user } = useAuth();
   const { settings, toggleFeature } = useFeatureSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [aiUsed, setAiUsed] = useState<number | null>(null);
+  const [insights, setInsights] = useState<InsightRow[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    (async () => {
+      const [{ data: usage }, { data: history }] = await Promise.all([
+        supabase.from("ai_usage").select("request_count").eq("user_id", user.id).eq("year_month", yearMonth).maybeSingle(),
+        supabase.from("ai_insights_history").select("id, period_label, content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      ]);
+      setAiUsed(usage?.request_count ?? 0);
+      setInsights(history ?? []);
+    })();
+  }, [user]);
+
+  const remaining = aiUsed === null ? null : Math.max(0, MONTHLY_LIMIT - aiUsed);
+
+  const deleteInsight = async (id: string) => {
+    const prev = insights;
+    setInsights(insights.filter(i => i.id !== id));
+    const { error } = await supabase.from("ai_insights_history").delete().eq("id", id);
+    if (error) {
+      console.error(error);
+      setInsights(prev);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
