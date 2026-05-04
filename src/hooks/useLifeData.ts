@@ -3,6 +3,8 @@ import { getISTDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { createEmptyLifeData, mergeLifeData, type LifeData, type Expense } from "@/lib/lifeDataTypes";
+import { enqueue } from "@/lib/syncQueue";
+import { loadLifeDataFromDb, replaceLifeDataInDb, putCollectionItem, deleteCollectionItem } from "@/lib/lifeDataDb";
 
 export type {
   Expense,
