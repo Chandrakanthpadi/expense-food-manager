@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle,
-  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info
+  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info, Trash2
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { useLifeData } from "@/hooks/useLifeData";
 import { useFeatureSettings } from "@/hooks/useFeatureSettings";
 import { generateAIAnalysis, auditExpenses, type AuditResult } from "@/lib/aiService";
@@ -776,7 +778,17 @@ function CategoryExpensesDetail({
     </div>
   );
 }
-const SpendingCalendar = ({ data, activeStart, onDayClick }: { data: any; activeStart: string; onDayClick: (date: string) => void }) => {
+const SpendingCalendar = ({
+  data,
+  activeStart,
+  onDayClick,
+  variant = "full"
+}: {
+  data: any;
+  activeStart: string;
+  onDayClick: (date: string) => void;
+  variant?: "full" | "compact";
+}) => {
   const d = new Date(activeStart + "T12:00:00");
   const year = d.getFullYear();
   const month = d.getMonth();
@@ -816,21 +828,29 @@ const SpendingCalendar = ({ data, activeStart, onDayClick }: { data: any; active
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="bg-card rounded-xl border border-border/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-muted/10">
-        <h2 className="text-sm font-bold text-foreground">{monthName}</h2>
-        {avg > 0 && (
-          <div className="text-right">
-            <span className="text-[10px] text-muted-foreground mr-1.5 font-medium">Daily Avg</span>
-            <span className="text-sm font-bold tabular-nums text-foreground">₹{avg.toFixed(0)}</span>
-          </div>
-        )}
-      </div>
-      <div className="p-2">
+    <div className={cn(
+      "overflow-hidden",
+      variant === "full" ? "bg-card rounded-xl border border-border/60 shadow-sm" : "bg-transparent"
+    )}>
+      {variant === "full" && (
+        <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-muted/10">
+          <h2 className="text-sm font-bold text-foreground">{monthName}</h2>
+          {avg > 0 && (
+            <div className="text-right">
+              <span className="text-[10px] text-muted-foreground mr-1.5 font-medium">Daily Avg</span>
+              <span className="text-sm font-bold tabular-nums text-foreground">₹{avg.toFixed(0)}</span>
+            </div>
+          )}
+        </div>
+      )}
+      <div className={cn(variant === "full" ? "p-2" : "p-1")}>
         <div className="grid grid-cols-7 gap-px bg-border/30 rounded-lg overflow-hidden border border-border/30">
           {dayNames.map(d => (
-            <div key={d} className="bg-muted/50 py-1.5 text-center text-[9px] font-black text-muted-foreground uppercase tracking-tighter">
-              {d}
+            <div key={d} className={cn(
+              "bg-muted/50 text-center font-black text-muted-foreground uppercase tracking-tighter",
+              variant === "full" ? "py-1.5 text-[9px]" : "py-0.5 text-[7px]"
+            )}>
+              {variant === "full" ? d : d[0]}
             </div>
           ))}
           {Array.from({ length: firstDay }).map((_, i) => (
@@ -847,23 +867,28 @@ const SpendingCalendar = ({ data, activeStart, onDayClick }: { data: any; active
                 key={day}
                 onClick={() => onDayClick(dateStr)}
                 className={cn(
-                  "min-h-[48px] p-1 flex flex-col items-center justify-start relative transition-all hover:opacity-80 cursor-pointer active:scale-95",
+                  "flex flex-col items-center justify-start relative transition-all hover:opacity-80 cursor-pointer active:scale-95",
+                  variant === "full" ? "min-h-[48px] p-1" : "min-h-[18px] p-0.5",
                   getHeatmapStyles(spent),
                   isToday && "ring-2 ring-primary/40 z-10"
                 )}
               >
                 <span className={cn(
-                  "text-[12px] font-medium tabular-nums mb-auto",
+                  "font-medium tabular-nums mb-auto",
+                  variant === "full" ? "text-[12px]" : "text-[7px]",
                   isToday ? "text-primary" : "text-foreground"
                 )}>
                   {day}
                 </span>
                 {spent > 0 && (
-                  <span className="text-[11px] font-medium leading-none pb-0.5 tracking-tighter text-foreground">
+                  <span className={cn(
+                    "font-medium leading-none pb-0.5 tracking-tighter text-foreground",
+                    variant === "full" ? "text-[11px]" : "text-[6px]"
+                  )}>
                     ₹{spent.toFixed(0)}
                   </span>
                 )}
-                {isToday && <div className="absolute top-1 right-1 w-1 h-1 bg-primary rounded-full animate-pulse" />}
+                {isToday && <div className={cn("absolute top-0.5 right-0.5 bg-primary rounded-full animate-pulse", variant === "full" ? "w-1 h-1" : "w-0.5 h-0.5")} />}
               </div>
             );
           })}
@@ -897,7 +922,34 @@ const Insights = () => {
   const [aiError, setAiError] = useState<string | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditResults, setAuditResults] = useState<AuditResult[]>([]);
+  const { user } = useAuth();
+  const [history, setHistory] = useState<any[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const fetchHistory = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("ai_insights_history")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("period_label", periodLabel(period, offset))
+      .order("created_at", { ascending: false });
+    setHistory(data || []);
+  }, [user, period, offset]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const deleteInsight = async (id: string) => {
+    const { error } = await supabase.from("ai_insights_history").delete().eq("id", id);
+    if (!error) {
+      setHistory(prev => prev.filter(i => i.id !== id));
+    }
+  };
+
+
 
   const handleAIAnalysis = async () => {
     setIsAnalyzing(true);
@@ -972,6 +1024,13 @@ const Insights = () => {
 
   const activeDaysInRange = getDaysInRange(activeStart, activeEnd);
   const activeDaysPassed = Math.max(1, activeDaysInRange.filter(d => d <= todayStr).length);
+
+  // Clear AI states when period/range changes
+  useEffect(() => {
+    setAiResponse(null);
+    setAiError(null);
+    setAuditResults([]);
+  }, [activeStart, activeEnd]);
 
 
   const getSubData = useCallback((s: string, e: string) => {
@@ -1319,137 +1378,7 @@ const Insights = () => {
 
         {/* Exportable content area */}
         <div ref={contentRef} className="space-y-4 bg-background rounded-xl p-1">
-          {activeLevel === "month" && (
-            <>
-              {/* AI Analysis Section */}
-          <div className="bg-card rounded-xl border border-border/60 overflow-hidden mb-4">
-            <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
-                  <Sparkles className="w-4 h-4" />
-                </span>
-                <h2 className="text-sm font-semibold">AI Insights</h2>
-              </div>
-              <button
-                onClick={handleAIAnalysis}
-                disabled={isAnalyzing}
-                className="text-xs font-medium text-primary hover:bg-primary/5 px-2 py-1 rounded-md transition-all disabled:opacity-50"
-              >
-                {isAnalyzing ? "Analyzing..." : "Regenerate"}
-              </button>
-            </div>
-            <div className="p-4">
-              {!aiResponse && !aiError && !isAnalyzing && (
-                <div className="text-center py-4 space-y-3">
-                  <p className="text-xs text-muted-foreground">Get personalized insights and recommendations based on your data.</p>
-                  <button
-                    onClick={handleAIAnalysis}
-                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generate AI Analysis
-                  </button>
-                </div>
-              )}
 
-              {isAnalyzing && (
-                <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  <p className="text-xs text-muted-foreground animate-pulse">Consulting the AI coach...</p>
-                </div>
-              )}
-
-              {aiError && (
-                <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 flex gap-2 items-start">
-                  <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                  <p className="text-xs text-destructive">{aiError}</p>
-                </div>
-              )}
-
-              {aiResponse && !isAnalyzing && (
-                <div className="prose prose-sm dark:prose-invert max-w-none ai-insights-content">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {aiResponse}
-                  </ReactMarkdown>
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Smart Auditor Section */}
-          <div className="bg-card rounded-xl border border-border/60 overflow-hidden mb-4">
-            <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-amber-50/5">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
-                  <Sparkles className="w-4 h-4" />
-                </span>
-                <h2 className="text-sm font-semibold">Smart Auditor</h2>
-              </div>
-              <button
-                onClick={handleAudit}
-                disabled={isAuditing}
-                className="text-xs font-medium text-amber-600 hover:bg-amber-500/10 px-2 py-1 rounded-md transition-all disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-                Scan for Anomalies
-              </button>
-            </div>
-            <div className="p-4">
-              {auditResults.length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                    <Info className="w-3 h-3" /> {auditResults.length} potential mismatches found
-                  </p>
-                  {auditResults.map(result => {
-                    const expense = data.expenses.find(e => e.id === result.id);
-                    if (!expense) return null;
-                    return (
-                      <div key={result.id} className="bg-amber-500/[0.03] border border-amber-200/40 rounded-lg p-3 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 pr-4">
-                            <p className="text-xs font-bold text-foreground">"{expense.note}"</p>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              Current: <span className="line-through">{expense.category}</span> → Suggestion: <span className="text-amber-600 font-bold">{result.suggested}</span>
-                            </p>
-                          </div>
-                          <div className="flex gap-2 shrink-0">
-                            <button 
-                              onClick={() => discardSuggestion(result.id)}
-                              className="text-[10px] font-bold text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
-                            >
-                              Discard
-                            </button>
-                            <button 
-                              onClick={() => applySuggestion(result.id, result.suggested)}
-                              className="bg-amber-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-amber-700 transition-colors flex items-center gap-1 shadow-sm"
-                            >
-                              <Check className="w-3 h-3" /> Apply
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-amber-800/70 italic leading-relaxed border-t border-amber-200/20 pt-2">
-                          "{result.reason}"
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : !isAuditing && (
-                <div className="text-center py-4">
-                  <p className="text-xs text-muted-foreground italic">No categorization anomalies detected in the current range.</p>
-                </div>
-              )}
-              {isAuditing && (
-                <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="w-6 h-6 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
-                  <p className="text-[10px] text-muted-foreground animate-pulse">Auditing your descriptions...</p>
-                </div>
-              )}
-            </div>
-          </div>
-            </>
-          )}
 
           {/* Day or Category detail view */}
           {activeLevel === "day" ? (
@@ -1481,20 +1410,76 @@ const Insights = () => {
                 />
               )}
 
-              {/* Sub-period breakdown table */}
-              <SubBreakdown
-                subPeriods={subPeriods}
-                getData={getSubData}
-                colorClass="bg-section-expense"
-                breakdownTitle={getBreakdownTitle(activeLevel as any)}
-                onRowClick={(rowStart, rowEnd, label) => {
-                  const next = getNextLevel(activeLevel as any);
-                  if (next) {
-                    setDrillStack(s => [...s, { label, start: rowStart, end: rowEnd, level: next }]);
-                  }
-                }}
-                settings={settings}
-              />
+              {activeLevel === "year" ? (
+                <div className="space-y-6">
+                  <div className="border border-border/60 rounded-2xl overflow-hidden bg-card shadow-sm">
+                    <div className="grid grid-cols-4">
+                      {[0, 1, 2, 3].map(qIdx => {
+                        const qMonths = subPeriods.slice(qIdx * 3, (qIdx + 1) * 3);
+                        const qStart = qMonths[0].start;
+                        const qEnd = qMonths[2].end;
+                        const qTotal = getSubData(qStart, qEnd).spent;
+
+                        return (
+                          <div key={`q-${qIdx}`} className="contents">
+                            {qMonths.map((m, mIdx) => {
+                              const mData = getSubData(m.start, m.end);
+                              return (
+                                <div
+                                  key={m.label}
+                                  className={cn(
+                                    "p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all active:bg-muted/10 hover:bg-muted/5 group",
+                                    "border-b border-r border-border/40",
+                                    qIdx === 3 && "border-b-0"
+                                  )}
+                                  onClick={() => setDrillStack(s => [...s, { label: m.label, start: m.start, end: m.end, level: "month" }])}
+                                >
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">{m.label}</span>
+                                  <span className="text-sm font-bold tabular-nums text-foreground">₹{mData.spent.toFixed(0)}</span>
+                                </div>
+                              );
+                            })}
+                            <div className={cn(
+                              "p-3 flex flex-col items-center justify-center gap-1 bg-primary/[0.03]",
+                              "border-b border-border/40",
+                              qIdx === 3 && "border-b-0"
+                            )}>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Q{qIdx + 1}</span>
+                              <span className="text-sm font-black tabular-nums text-primary">₹{qTotal.toFixed(0)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Yearly Total Summary Card */}
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/20 p-5 flex justify-between items-center shadow-inner mt-4">
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider">Yearly Summary</span>
+                      <p className="text-sm text-muted-foreground">Comprehensive overview of {periodLabel(period, offset)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-black tabular-nums text-primary leading-none">₹{insights.expenses.totalSpent.toFixed(0)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 font-medium italic">Avg ₹{insights.expenses.avgPerDay.toFixed(0)} / day</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <SubBreakdown
+                  subPeriods={subPeriods}
+                  getData={getSubData}
+                  colorClass="bg-section-expense"
+                  breakdownTitle={getBreakdownTitle(activeLevel as any)}
+                  onRowClick={(rowStart, rowEnd, label) => {
+                    const next = getNextLevel(activeLevel as any);
+                    if (next) {
+                      setDrillStack(s => [...s, { label, start: rowStart, end: rowEnd, level: next }]);
+                    }
+                  }}
+                  settings={settings}
+                />
+              )}
 
 
               {/* ── Expenses ── */}
@@ -1506,17 +1491,17 @@ const Insights = () => {
                   onTitleClick={() => navigate(`/insights/expenses?period=${period}&offset=${offset}`)}
                 >
                   <MetricRow label="Total spent" value={`₹${insights.expenses.totalSpent.toFixed(2)}`} />
-                  <InsightChart data={insights.expenses.dailySpend} color="var(--section-expense)" />
+                  {/* <InsightChart data={insights.expenses.dailySpend} color="var(--section-expense)" /> */}
                   <MetricRow label="Daily average" value={`₹${insights.expenses.avgPerDay.toFixed(2)}`} />
 
-                  <MetricRow label="Transactions" value={String(insights.expenses.count)} />
-                  {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
+                  {/* <MetricRow label="Transactions" value={String(insights.expenses.count)} /> */}
+                  {/* {insights.expenses.highestDay && insights.expenses.highestDay.amount > 0 && (
                     <MetricRow
                       label="Biggest day"
                       value={`₹${insights.expenses.highestDay.amount.toFixed(2)}`}
                       sub={new Date(insights.expenses.highestDay.date + "T12:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}
                     />
-                  )}
+                  )} */}
                   {insights.expenses.categoryBreakdown.length > 0 && (
                     <div className="mt-4 space-y-1">
                       <p className="text-xs text-muted-foreground font-medium mb-2 px-1">By category</p>
@@ -1652,22 +1637,177 @@ const Insights = () => {
                 </Section>
               )}
 
-              {/* ── Journal ── */}
-              {settings.journal && (
-                <Section title="Journal" icon={<BookOpen className="w-4 h-4" />} colorClass="bg-section-journal" onTitleClick={() => navigate("/insights/journal")}>
-                  <MetricRow label="Entries written" value={String(insights.journal.count)} />
-                  {insights.journal.moodBreakdown.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Mood frequency</p>
-                      {insights.journal.moodBreakdown.map(([mood, count]) => (
-                        <div key={mood} className="flex justify-between text-xs">
-                          <span className="text-muted-foreground capitalize">{mood}</span>
-                          <span className="tabular-nums font-medium">{count}</span>
-                        </div>
-                      ))}
+              {/* AI Sections at the bottom */}
+              {activeLevel === "month" && (
+                <div className="mt-8 pt-4 border-t border-border/20 space-y-6">
+                  {/* AI Analysis Section */}
+                  <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+                          <Sparkles className="w-4 h-4" />
+                        </span>
+                        <h2 className="text-sm font-semibold">AI Insights</h2>
+                      </div>
+                      <button
+                        onClick={handleAIAnalysis}
+                        disabled={isAnalyzing}
+                        className="text-xs font-medium text-primary hover:bg-primary/5 px-2 py-1 rounded-md transition-all disabled:opacity-50"
+                      >
+                        {isAnalyzing ? "Analyzing..." : "Regenerate"}
+                      </button>
                     </div>
-                  )}
-                </Section>
+                    <div className="p-4">
+                      {!aiResponse && !aiError && !isAnalyzing && (
+                        <div className="text-center py-4 space-y-3">
+                          <p className="text-xs text-muted-foreground">Get personalized insights and recommendations based on your data.</p>
+                          <button
+                            onClick={handleAIAnalysis}
+                            className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Generate AI Analysis
+                          </button>
+                        </div>
+                      )}
+
+                      {isAnalyzing && (
+                        <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                          <p className="text-xs text-muted-foreground animate-pulse">Consulting the AI coach...</p>
+                        </div>
+                      )}
+
+                      {aiError && (
+                        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 flex gap-2 items-start">
+                          <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                          <p className="text-xs text-destructive">{aiError}</p>
+                        </div>
+                      )}
+
+                      {aiResponse && !isAnalyzing && (
+                        <div className="prose prose-sm dark:prose-invert max-w-none ai-insights-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {aiResponse}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
+                      {/* Saved Insights History */}
+                      {history.length > 0 && (
+                        <div className="mt-6 border-t border-border/20 pt-4 space-y-3">
+                          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">Saved Insights History</h3>
+                          <div className="divide-y divide-border/20">
+                            {history.map((item) => {
+                              const isOpen = expandedId === item.id;
+                              const date = new Date(item.created_at).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" });
+                              return (
+                                <div key={item.id} className="py-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setExpandedId(isOpen ? null : item.id)}
+                                      className="flex-1 min-w-0 flex items-center gap-2 text-left active:scale-[0.99] transition-all"
+                                    >
+                                      <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", isOpen ? "rotate-0" : "-rotate-90")} />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">{item.period_label}</p>
+                                        <p className="text-[10px] text-muted-foreground">{date}</p>
+                                      </div>
+                                    </button>
+                                    <button
+                                      onClick={() => deleteInsight(item.id)}
+                                      className="w-7 h-7 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                                      aria-label="Delete insight"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  {isOpen && (
+                                    <div className="mt-3 prose prose-sm dark:prose-invert max-w-none ai-insights-content bg-muted/30 rounded-lg p-3">
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Smart Auditor Section */}
+                  <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between bg-amber-50/5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
+                          <Sparkles className="w-4 h-4" />
+                        </span>
+                        <h2 className="text-sm font-semibold">Smart Auditor</h2>
+                      </div>
+                      <button
+                        onClick={handleAudit}
+                        disabled={isAuditing}
+                        className="text-xs font-medium text-amber-600 hover:bg-amber-500/10 px-2 py-1 rounded-md transition-all disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        Scan for Anomalies
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      {auditResults.length > 0 ? (
+                        <div className="space-y-3">
+                          <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                            <Info className="w-3 h-3" /> {auditResults.length} potential mismatches found
+                          </p>
+                          {auditResults.map(result => {
+                            const expense = data.expenses.find(e => e.id === result.id);
+                            if (!expense) return null;
+                            return (
+                              <div key={result.id} className="bg-amber-500/[0.03] border border-amber-200/40 rounded-lg p-3 space-y-2">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1 pr-4">
+                                    <p className="text-xs font-bold text-foreground">"{expense.note}"</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                      Current: <span className="line-through">{expense.category}</span> → Suggestion: <span className="text-amber-600 font-bold">{result.suggested}</span>
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2 shrink-0">
+                                    <button
+                                      onClick={() => discardSuggestion(result.id)}
+                                      className="text-[10px] font-bold text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+                                    >
+                                      Discard
+                                    </button>
+                                    <button
+                                      onClick={() => applySuggestion(result.id, result.suggested)}
+                                      className="bg-amber-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-amber-700 transition-colors flex items-center gap-1 shadow-sm"
+                                    >
+                                      <Check className="w-3 h-3" /> Apply
+                                    </button>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-amber-800/70 italic leading-relaxed border-t border-amber-200/20 pt-2">
+                                  "{result.reason}"
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : !isAuditing && (
+                        <div className="text-center py-4">
+                          <p className="text-xs text-muted-foreground italic">No categorization anomalies detected in the current range.</p>
+                        </div>
+                      )}
+                      {isAuditing && (
+                        <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                          <div className="w-6 h-6 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                          <p className="text-[10px] text-muted-foreground animate-pulse">Auditing your descriptions...</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
             </>

@@ -40,33 +40,27 @@ const Settings = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [aiUsed, setAiUsed] = useState<number | null>(null);
-  const [insights, setInsights] = useState<InsightRow[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isSyncingUsage, setIsSyncingUsage] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const yearMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
     (async () => {
-      const [{ data: usage }, { data: history }] = await Promise.all([
-        supabase.from("ai_usage").select("request_count").eq("user_id", user.id).eq("year_month", yearMonth).maybeSingle(),
-        supabase.from("ai_insights_history").select("id, period_label, content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
-      ]);
+      setIsSyncingUsage(true);
+      const { data: usage, error } = await supabase
+        .from("ai_usage")
+        .select("request_count")
+        .eq("user_id", user.id)
+        .eq("year_month", yearMonth)
+        .maybeSingle();
+      
+      if (error) console.error("Error fetching AI usage:", error);
       setAiUsed(usage?.request_count ?? 0);
-      setInsights(history ?? []);
+      setIsSyncingUsage(false);
     })();
   }, [user]);
 
   const remaining = aiUsed === null ? null : Math.max(0, MONTHLY_LIMIT - aiUsed);
-
-  const deleteInsight = async (id: string) => {
-    const prev = insights;
-    setInsights(insights.filter(i => i.id !== id));
-    const { error } = await supabase.from("ai_insights_history").delete().eq("id", id);
-    if (error) {
-      console.error(error);
-      setInsights(prev);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,69 +102,29 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* AI Insights */}
+        {/* AI Insights Usage */}
         <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
           <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" /> AI Insights
+                <Sparkles className="w-3.5 h-3.5 text-primary" /> AI Usage
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {remaining === null
+                {aiUsed === null || isSyncingUsage
                   ? "Loading usage…"
-                  : <><span className="font-medium text-foreground">{remaining}</span> of {MONTHLY_LIMIT} requests left this month</>}
+                  : <><span className="font-medium text-foreground">{aiUsed}</span> of {MONTHLY_LIMIT} requests used this month</>}
               </p>
             </div>
-            {remaining !== null && (
+            {aiUsed !== null && !isSyncingUsage && (
               <div className="text-right shrink-0">
-                <p className="text-lg font-bold tabular-nums leading-none">{remaining}</p>
+                <p className={cn(
+                  "text-lg font-bold tabular-nums leading-none",
+                  remaining === 0 ? "text-destructive" : "text-foreground"
+                )}>{remaining}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">remaining</p>
               </div>
             )}
           </div>
-
-          {insights.length === 0 ? (
-            <div className="px-4 py-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                No saved insights yet. Generate one from the Insights page to see it here.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/40">
-              {insights.map((row) => {
-                const isOpen = expandedId === row.id;
-                const date = new Date(row.created_at).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" });
-                return (
-                  <div key={row.id} className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setExpandedId(isOpen ? null : row.id)}
-                        className="flex-1 min-w-0 flex items-center gap-2 text-left active:scale-[0.99] transition-all"
-                      >
-                        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{row.period_label}</p>
-                          <p className="text-[11px] text-muted-foreground">{date}</p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => deleteInsight(row.id)}
-                        className="w-7 h-7 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
-                        aria-label="Delete insight"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {isOpen && (
-                      <div className="mt-2 px-1 prose prose-sm max-w-none text-sm prose-headings:text-foreground prose-p:text-foreground/90 prose-strong:text-foreground prose-li:text-foreground/90">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{row.content}</ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Data Management */}
@@ -254,30 +208,32 @@ const Settings = () => {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-        </div>
-
-        {/* Account */}
-        <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/40">
-            <h2 className="text-sm font-semibold">Account</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
           </div>
-          <button
-            onClick={() => signOut()}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-destructive/5 active:scale-[0.99] transition-all"
-          >
-            <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-destructive/10 text-destructive">
-              <LogOut className="w-4.5 h-4.5" />
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">Sign Out</p>
+
+          {/* Account */}
+          <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
+            <div className="px-4 py-3 border-b border-border/40">
+              <h2 className="text-sm font-semibold">Account</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
             </div>
-          </button>
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-destructive/5 active:scale-[0.99] transition-all"
+            >
+              <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-destructive/10 text-destructive">
+                <LogOut className="w-4.5 h-4.5" />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-destructive">Sign Out</p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </div>
-    </div>
   );
 };
+
+const cn = (...classes: any[]) => classes.filter(Boolean).join(" ");
 
 export default Settings;

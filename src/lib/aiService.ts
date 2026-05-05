@@ -44,7 +44,17 @@ export async function generateAIAnalysis({ data, periodLabel, enabledFeatures, s
         return acc;
       }, {})
     ).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    summaryParts.push(`Expenses: Total spent ₹${totalSpent.toFixed(2)}. Top categories: ${topCats.map(([c, a]) => `${c} (₹${a.toFixed(0)})`).join(", ")}.`);
+
+    const expenseDetails = expenses
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(e => `- ${e.date}: ${e.note} [${e.category}] ₹${e.amount}`)
+      .join("\n");
+
+    summaryParts.push(
+      `Expenses: Total spent ₹${totalSpent.toFixed(2)}.\n` +
+      `Top categories: ${topCats.map(([c, a]) => `${c} (₹${a.toFixed(0)})`).join(", ")}.\n` +
+      `Detailed Transactions:\n${expenseDetails}`
+    );
   }
   if (enabledFeatures.includes("food")) {
     const food = data.food.filter(f => inRange(f.date));
@@ -78,16 +88,17 @@ Analyze the following personal metrics for the period: ${periodLabel}.
 ${summaryParts.join("\n")}
 
 ## Your Task
-Generate a structured personal performance report:
+Generate a structured personal performance report based on the data provided. 
+IMPORTANT: Pay close attention to the "Detailed Transactions" notes. Identify recurring habits, hidden costs, and lifestyle patterns (e.g., dining frequency, specific vendors, subscription costs, or impulse purchases).
 
 ### 1. 🧭 Executive Summary (2–3 sentences)
-### 2. 💡 Top 3 Actionable Insights (What / Why it matters / Action)
-### 3. ⚠️ One Risk to Watch
+### 2. 💡 Top 3 Actionable Insights (What / Why it matters / Action) - Reference specific transactions or patterns found in the notes.
+### 3. ⚠️ One Risk or Pattern to Watch
 ### 4. 🏆 Win of the Period
-### 5. 🎯 Weekly Focus Recommendation (with measurable target)
-### 6. 💬 Closing Thought (reference a specific number from the report)
+### 5. 🎯 Focus Recommendation (with a measurable target)
+### 6. 💬 Closing Thought (reference a specific observation from the data)
 
-Use **bold** for key numbers. Use ₹ for currency. Be encouraging but honest.
+Use **bold** for key numbers and specific transaction names found in the notes. Use ₹ for currency. Be encouraging, honest, and data-driven.
 `;
 
   return callAI(prompt, "analysis", { periodLabel });
