@@ -78,7 +78,10 @@ export function useLifeData() {
           })),
           tasks: tasks.data ?? [],
           journal: journal.data ?? [],
-          loans: (loans.data ?? []).map(l => ({ ...l, kind: l.kind === "repaid" ? "repaid" as const : "lent" as const })),
+          loans: (loans.data ?? []).map(l => ({
+            ...l,
+            kind: (["lent", "repaid", "borrowed", "returned"].includes(l.kind) ? l.kind : "lent") as Loan["kind"],
+          })),
         });
 
         if (!cancelled) {

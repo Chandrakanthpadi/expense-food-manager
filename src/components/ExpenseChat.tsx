@@ -14,7 +14,7 @@ interface Props {
   selectedDate: string;
   categories: string[];
   onAdd: (amount: number, category: string, note: string, date?: string, person?: string | null) => void;
-  onAddLoan: (person: string, amount: number, kind: "lent" | "repaid", note: string, date?: string) => void;
+  onAddLoan: (person: string, amount: number, kind: "lent" | "repaid" | "borrowed" | "returned", note: string, date?: string) => void;
 }
 
 export function ExpenseChat({ selectedDate, categories, onAdd, onAddLoan }: Props) {
@@ -54,7 +54,11 @@ export function ExpenseChat({ selectedDate, categories, onAdd, onAddLoan }: Prop
         onAddLoan(entry.person, entry.amount, entry.kind, entry.note, selectedDate);
         reply = entry.kind === "lent"
           ? `Lent ₹${entry.amount.toFixed(2)} to ${entry.person}`
-          : `${entry.person} paid back ₹${entry.amount.toFixed(2)}`;
+          : entry.kind === "repaid"
+            ? `${entry.person} paid back ₹${entry.amount.toFixed(2)}`
+            : entry.kind === "borrowed"
+              ? `Borrowed ₹${entry.amount.toFixed(2)} from ${entry.person}`
+              : `Returned ₹${entry.amount.toFixed(2)} to ${entry.person}`;
         if (entry.note) reply += `\n${entry.note}`;
       } else {
         onAdd(entry.amount, entry.category, entry.note, selectedDate, entry.person ?? null);
