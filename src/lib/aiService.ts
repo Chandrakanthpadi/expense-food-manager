@@ -1,5 +1,25 @@
 import { LifeData } from "@/hooks/useLifeData";
 import { supabase } from "@/integrations/supabase/client";
+import { parseExpenseResult } from "../../supabase/functions/ai-insights/expense-parser";
+
+export async function interpretExpenseMessage(message: string) {
+  const text = message.trim();
+  if (!text || text.length > 500) throw new Error("Enter an expense message of up to 500 characters.");
+  const { data, error } = await supabase.functions.invoke("ai-insights", {
+    body: { mode: "expense-chat", message: text },
+  });
+  if (error) {
+    let errorMessage = error.message;
+    const context = (error as { context?: Response }).context;
+    if (context instanceof Response) {
+      const body = await context.json().catch(() => null);
+      if (typeof body?.error === "string") errorMessage = body.error;
+    }
+    throw new Error(errorMessage || "Could not process the expense. Try again.");
+  }
+  if (data?.error) throw new Error(data.error);
+  return parseExpenseResult(JSON.stringify(data?.expense));
+}
 
 export interface AIAnalysisRequest {
   data: LifeData;

@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Plus, X, ChevronDown } from "lucide-react";
 import type { Expense } from "@/hooks/useLifeData";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ExpenseChat } from "@/components/ExpenseChat";
+import { expenseCategories } from "../../supabase/functions/ai-insights/expense-parser";
 
-const categories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+const categories = expenseCategories;
 
 interface Props {
   expenses: Expense[];
@@ -15,7 +18,8 @@ interface Props {
 
 export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpdate }: Props) {
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState(categories[0]);
+  const [category, setCategory] = useState<string>(categories[0]);
+  const [entryMode, setEntryMode] = useState<"chat" | "manual">("chat");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -59,6 +63,12 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
         <span className="text-lg font-semibold tabular-nums">₹{dayTotal.toFixed(2)}</span>
       </div>
 
+      <div className="flex gap-1" role="tablist" aria-label="Expense entry mode">
+        <Button variant={entryMode === "chat" ? "secondary" : "ghost"} size="sm" role="tab" aria-selected={entryMode === "chat"} onClick={() => setEntryMode("chat")}>Chat</Button>
+        <Button variant={entryMode === "manual" ? "secondary" : "ghost"} size="sm" role="tab" aria-selected={entryMode === "manual"} onClick={() => setEntryMode("manual")}>Manual</Button>
+      </div>
+
+      {entryMode === "chat" ? <ExpenseChat key={selectedDate} selectedDate={selectedDate} onAdd={onAdd} /> : <>
       <div className="flex gap-2">
         <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
           className="flex-1 min-w-0 bg-muted rounded-md px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/30"
@@ -77,6 +87,8 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
           <Plus className="w-4 h-4" />
         </button>
       </div>
+
+      </>}
 
       {dayExpenses.length > 0 && (
         <ul className="space-y-2 pt-1">

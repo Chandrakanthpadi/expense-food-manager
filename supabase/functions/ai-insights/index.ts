@@ -1,9 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3.25.76";
+import { expenseChatPrompt, parseExpenseResult } from "./expense-parser.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const BodySchema = z.object({
+  mode: z.enum(["status", "analysis", "audit", "categorize", "expense-chat"]),
+  prompt: z.string().trim().min(1).max(100000).optional(),
+  message: z.string().trim().min(1).max(500).optional(),
+  periodLabel: z.string().max(255).optional(),
+});
 
 const MONTHLY_LIMIT = 10;
 const FREE_MODEL = "openai/gpt-oss-20b:free";
@@ -16,18 +21,21 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const url = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !serviceKey) return json({ error: "Server not configured" }, 500);
+    const supabase = createClient(url, serviceKey);
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
     if (userErr || !userData.user) return json({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const body = await req.json().catch(() => ({}));
-    const { mode, prompt, periodLabel } = body ?? {};
+    const parsed = BodySchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return json({ error: "Invalid request. Check the message and try again." }, 400);
+    const { mode, periodLabel, message } = parsed.data;
+    const prompt = mode === "expense-chat" && message ? expenseChatPrompt(message) : parsed.data.prompt;
+    if (mode === "expense-chat" && !message) return json({ error: "Enter an expense message." }, 400);
 
     // Compute current month usage (used by all modes)
     const now = new Date();
@@ -79,11 +87,24 @@ Deno.serve(async (req) => {
     if (!aiResp.ok) {
       const errBody = await aiResp.text();
       console.error("OpenRouter error:", aiResp.status, errBody);
+      if (aiResp.status === 404) {
+        return json({ error: "The configured free AI model is no longer available. Expense chat cannot record entries until an available free model is selected. Manual entry still works." }, 404);
+      }
       return json({ error: "AI request failed" }, 502);
     }
 
     const result = await aiResp.json();
     const content = result.choices?.[0]?.message?.content ?? "";
+
+    // Never send unchecked model output to the expense write path.
+    let expense;
+    if (mode === "expense-chat") {
+      try {
+        expense = parseExpenseResult(content);
+      } catch {
+        return json({ error: "Could not understand this expense. Send one amount and what you paid for." }, 422);
+      }
+    }
 
     // Increment usage
     if (usage) {
@@ -103,6 +124,7 @@ Deno.serve(async (req) => {
 
     return json({
       content,
+      ...(expense ? { expense } : {}),
       used: currentCount + 1,
       limit: MONTHLY_LIMIT,
     });
