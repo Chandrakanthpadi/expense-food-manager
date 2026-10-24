@@ -112,18 +112,9 @@ const Settings = () => {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {aiUsed === null || isSyncingUsage
                   ? "Loading usage…"
-                  : <><span className="font-medium text-foreground">{aiUsed}</span> of {MONTHLY_LIMIT} requests used this month</>}
+                  : <><span className="font-medium text-foreground">{aiUsed}</span> requests this month · Unlimited</>}
               </p>
             </div>
-            {aiUsed !== null && !isSyncingUsage && (
-              <div className="text-right shrink-0">
-                <p className={cn(
-                  "text-lg font-bold tabular-nums leading-none",
-                  remaining === 0 ? "text-destructive" : "text-foreground"
-                )}>{remaining}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">remaining</p>
-              </div>
-            )}
           </div>
         </div>
 

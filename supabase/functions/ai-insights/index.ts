@@ -10,7 +10,6 @@ const BodySchema = z.object({
   periodLabel: z.string().max(255).optional(),
 });
 
-const MONTHLY_LIMIT = 10;
 const FREE_MODEL = "recursive/flint-v1.0:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -52,19 +51,11 @@ Deno.serve(async (req) => {
 
     // status mode: just return usage info
     if (mode === "status") {
-      return json({ used: currentCount, limit: MONTHLY_LIMIT });
+      return json({ used: currentCount, limit: null });
     }
 
     if (!prompt || typeof prompt !== "string") {
       return json({ error: "Missing prompt" }, 400);
-    }
-
-    if (currentCount >= MONTHLY_LIMIT) {
-      return json({
-        error: `Monthly limit reached (${MONTHLY_LIMIT} requests). Resets next month.`,
-        limit: MONTHLY_LIMIT,
-        used: currentCount,
-      }, 429);
     }
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -126,7 +117,7 @@ Deno.serve(async (req) => {
       content,
       ...(expense ? { expense } : {}),
       used: currentCount + 1,
-      limit: MONTHLY_LIMIT,
+      limit: null,
     });
   } catch (e) {
     console.error("ai-insights error:", e);
