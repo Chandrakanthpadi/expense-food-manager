@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792836633481,
+      "tag": "0000_loans_and_expense_person",
+      "breakpoints": true
+    }
+  ]
+}
