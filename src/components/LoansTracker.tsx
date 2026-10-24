@@ -64,7 +64,7 @@ export function LoansTracker({ loans, selectedDate, onAdd, onRemove }: Props) {
             <li key={b.person} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
               <span className="font-medium truncate">{b.person}</span>
               <span className="text-xs text-muted-foreground tabular-nums ml-auto">
-                {b.borrowed > 0 ? `gave ₹${b.lent.toFixed(0)} · took ₹${b.borrowed.toFixed(0)}` : `lent ₹${b.lent.toFixed(0)} · back ₹{b.repaid.toFixed(0)}`}
+                {b.borrowed > 0 ? `gave ₹${b.lent.toFixed(0)} · took ₹${b.borrowed.toFixed(0)}` : `lent ₹${b.lent.toFixed(0)} · back ₹${b.repaid.toFixed(0)}`}
               </span>
               <span className={cn("tabular-nums font-semibold w-24 text-right", b.due <= 0 && "text-muted-foreground")}>
                 {b.due > 0 ? `₹${b.due.toFixed(0)}` : b.due < 0 ? `owe ₹${(-b.due).toFixed(0)}` : "Settled"}
