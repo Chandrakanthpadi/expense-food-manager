@@ -4,6 +4,18 @@ export interface Expense {
   category: string;
   note: string;
   date: string;
+  /** Friend or family member the money was spent on. */
+  person?: string | null;
+}
+
+export interface Loan {
+  id: string;
+  person: string;
+  amount: number;
+  /** "lent" = I gave money; "repaid" = they paid me back. */
+  kind: "lent" | "repaid";
+  note: string;
+  date: string;
 }
 
 export interface FoodEntry {
@@ -57,6 +69,7 @@ export interface LifeData {
   habits: Habit[];
   tasks: Task[];
   journal: JournalEntry[];
+  loans: Loan[];
 }
 
 export const STORAGE_KEY = "lifeflow-data";
@@ -69,6 +82,7 @@ export const COLLECTION_STORES = [
   "habits",
   "tasks",
   "journal",
+  "loans",
 ] as const satisfies ReadonlyArray<keyof LifeData>;
 
 export type LifeDataStoreName = typeof COLLECTION_STORES[number];
@@ -82,6 +96,7 @@ export function createEmptyLifeData(): LifeData {
     habits: [],
     tasks: [],
     journal: [],
+    loans: [],
   };
 }
 
@@ -94,5 +109,6 @@ export function mergeLifeData(value?: Partial<LifeData> | null): LifeData {
     habits: Array.isArray(value?.habits) ? value.habits : [],
     tasks: Array.isArray(value?.tasks) ? value.tasks : [],
     journal: Array.isArray(value?.journal) ? value.journal : [],
+    loans: Array.isArray(value?.loans) ? value.loans : [],
   };
 }

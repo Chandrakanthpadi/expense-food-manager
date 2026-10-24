@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getISTDateStr } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { createEmptyLifeData, mergeLifeData, type LifeData, type Expense } from "@/lib/lifeDataTypes";
+import { createEmptyLifeData, mergeLifeData, type LifeData, type Expense, type Loan } from "@/lib/lifeDataTypes";
 import { enqueue } from "@/lib/syncQueue";
 import { loadLifeDataFromDb, replaceLifeDataInDb, putCollectionItem, deleteCollectionItem } from "@/lib/lifeDataDb";
 
@@ -13,6 +13,7 @@ export type {
   Habit,
   JournalEntry,
   LifeData,
+  Loan,
   MealCheck,
   Task,
 } from "@/lib/lifeDataTypes";
@@ -54,14 +55,15 @@ export function useLifeData() {
       }
 
       try {
-        const [expenses, food, mealChecks, exercise, habits, tasks, journal] = await Promise.all([
-          supabase.from("expenses").select("id, amount, category, note, date").order("created_at", { ascending: false }),
+        const [expenses, food, mealChecks, exercise, habits, tasks, journal, loans] = await Promise.all([
+          supabase.from("expenses").select("id, amount, category, note, date, person").order("created_at", { ascending: false }),
           supabase.from("food").select("id, meal, items, calories, date").order("created_at", { ascending: false }),
           supabase.from("meal_checks").select("id, date, breakfast, lunch, dinner, snack"),
           supabase.from("exercise").select("id, activity, duration, date").order("created_at", { ascending: false }),
           supabase.from("habits").select("id, name, completed_dates").order("created_at", { ascending: false }),
           supabase.from("tasks").select("id, text, done, date").order("created_at", { ascending: true }),
           supabase.from("journal").select("id, content, mood, date").order("created_at", { ascending: false }),
+          supabase.from("loans").select("id, person, amount, kind, note, date").order("created_at", { ascending: false }),
         ]);
 
         const fresh = mergeLifeData({
@@ -76,6 +78,7 @@ export function useLifeData() {
           })),
           tasks: tasks.data ?? [],
           journal: journal.data ?? [],
+          loans: (loans.data ?? []).map(l => ({ ...l, kind: l.kind === "repaid" ? "repaid" as const : "lent" as const })),
         });
 
         if (!cancelled) {
@@ -96,9 +99,9 @@ export function useLifeData() {
   const today = () => getISTDateStr();
 
   // ── Expenses ──
-  const addExpense = useCallback((amount: number, category: string, note: string, date?: string) => {
+  const addExpense = useCallback((amount: number, category: string, note: string, date?: string, person?: string | null) => {
     if (!user) return;
-    const entry = { id: uid(), amount, category, note, date: date || today() };
+    const entry = { id: uid(), amount, category, note, date: date || today(), person: person?.trim() || null };
     const current = dataRef.current;
     commitData({ ...current, expenses: [entry, ...current.expenses] });
     putCollectionItem("expenses", entry);
@@ -122,6 +125,23 @@ export function useLifeData() {
     putCollectionItem("expenses", next);
     enqueue({ kind: "update", table: "expenses", match: { id }, values: updates });
   }, [user, commitData]);
+
+  // ── Loans (kept out of spending totals) ──
+  const addLoan = useCallback((person: string, amount: number, kind: Loan["kind"], note: string, date?: string) => {
+    if (!user) return;
+    const entry: Loan = { id: uid(), person: person.trim(), amount, kind, note, date: date || today() };
+    const current = dataRef.current;
+    commitData({ ...current, loans: [entry, ...current.loans] });
+    putCollectionItem("loans", entry);
+    enqueue({ kind: "insert", table: "loans", values: { ...entry, user_id: user.id } });
+  }, [user, commitData]);
+
+  const removeLoan = useCallback((id: string) => {
+    const current = dataRef.current;
+    commitData({ ...current, loans: current.loans.filter(l => l.id !== id) });
+    deleteCollectionItem("loans", id);
+    enqueue({ kind: "delete", table: "loans", match: { id } });
+  }, [commitData]);
 
   // ── Food ──
   const addFood = useCallback((meal: string, items: string, calories?: number, date?: string) => {
@@ -282,6 +302,7 @@ export function useLifeData() {
         supabase.from("habits").delete().eq("user_id", user.id),
         supabase.from("tasks").delete().eq("user_id", user.id),
         supabase.from("journal").delete().eq("user_id", user.id),
+        supabase.from("loans").delete().eq("user_id", user.id),
       ]);
 
       // Insert in batches
@@ -294,6 +315,7 @@ export function useLifeData() {
         merged.habits.length > 0 && supabase.from("habits").insert(merged.habits.map(h => ({ id: h.id, name: h.name, completed_dates: h.completedDates, user_id: userId }))),
         merged.tasks.length > 0 && supabase.from("tasks").insert(merged.tasks.map(t => ({ ...t, user_id: userId }))),
         merged.journal.length > 0 && supabase.from("journal").insert(merged.journal.map(j => ({ ...j, user_id: userId }))),
+        merged.loans.length > 0 && supabase.from("loans").insert(merged.loans.map(l => ({ ...l, user_id: userId }))),
       ]);
 
       commitData(merged);
@@ -319,6 +341,7 @@ export function useLifeData() {
   return {
     data,
     addExpense, removeExpense, updateExpense,
+    addLoan, removeLoan,
     addFood, removeFood, toggleMealCheck,
     addExercise, removeExercise,
     addHabit, toggleHabit, removeHabit,
