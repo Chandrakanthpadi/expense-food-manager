@@ -1,24 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, X, ChevronDown } from "lucide-react";
 import type { Expense } from "@/hooks/useLifeData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ExpenseChat } from "@/components/ExpenseChat";
-import { expenseCategories } from "../../supabase/functions/ai-insights/expense-parser";
-
-const categories = expenseCategories;
+import { mergeCategories } from "../../supabase/functions/ai-insights/expense-parser";
 
 interface Props {
   expenses: Expense[];
   selectedDate: string;
-  onAdd: (amount: number, category: string, note: string, date?: string) => void;
+  onAdd: (amount: number, category: string, note: string, date?: string, person?: string | null) => void;
+  onAddLoan: (person: string, amount: number, kind: "lent" | "repaid", note: string, date?: string) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Expense>) => void;
 }
 
-export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpdate }: Props) {
+export function ExpenseTracker({ expenses, selectedDate, onAdd, onAddLoan, onRemove, onUpdate }: Props) {
+  const categories = useMemo(() => mergeCategories(expenses.map(e => e.category)), [expenses]);
+  const people = useMemo(() => [...new Set(expenses.map(e => e.person?.trim()).filter(Boolean) as string[])], [expenses]);
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<string>(categories[0]);
+  const [category, setCategory] = useState<string>("Food");
+  const [person, setPerson] = useState("");
+  const [editPerson, setEditPerson] = useState("");
   const [entryMode, setEntryMode] = useState<"chat" | "manual">("chat");
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,9 +36,13 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
   const handleAdd = () => {
     const num = parseFloat(amount);
     if (!num || num <= 0) return;
-    onAdd(num, category, note, selectedDate);
+    const cat = category.trim();
+    if (!cat) return;
+    const existing = categories.find(c => c.toLowerCase() === cat.toLowerCase());
+    onAdd(num, existing ?? cat.charAt(0).toUpperCase() + cat.slice(1), note, selectedDate, person.trim() || null);
     setAmount("");
     setNote("");
+    setPerson("");
   };
 
   const startEditing = (e: Expense) => {
@@ -43,6 +50,7 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
     setEditAmount(e.amount.toString());
     setEditCategory(e.category);
     setEditNote(e.note || "");
+    setEditPerson(e.person || "");
   };
 
   const handleUpdate = (id: string) => {
@@ -50,8 +58,9 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
     if (!num || num <= 0) return;
     onUpdate(id, {
       amount: num,
-      category: editCategory,
-      note: editNote
+      category: editCategory.trim() || "Other",
+      note: editNote,
+      person: editPerson.trim() || null,
     });
     setEditingId(null);
   };
@@ -68,16 +77,18 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
         <Button variant={entryMode === "manual" ? "secondary" : "ghost"} size="sm" role="tab" aria-selected={entryMode === "manual"} onClick={() => setEntryMode("manual")}>Manual</Button>
       </div>
 
-      {entryMode === "chat" ? <ExpenseChat key={selectedDate} selectedDate={selectedDate} onAdd={onAdd} /> : <>
+      {entryMode === "chat" ? <ExpenseChat key={selectedDate} selectedDate={selectedDate} categories={categories} onAdd={onAdd} onAddLoan={onAddLoan} /> : <>
       <div className="flex gap-2">
         <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)}
           className="flex-1 min-w-0 bg-muted rounded-md px-3 py-2 text-sm tabular-nums outline-none focus:ring-2 focus:ring-ring/30"
           onKeyDown={e => e.key === "Enter" && handleAdd()} />
-        <select value={category} onChange={e => setCategory(e.target.value)}
-          className="bg-muted rounded-md px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30">
-          {categories.map(c => <option key={c}>{c}</option>)}
-        </select>
+        <input list="expense-categories" aria-label="Category" placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} maxLength={30}
+          className="w-32 bg-muted rounded-md px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
+        <datalist id="expense-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
+        <datalist id="expense-people">{people.map(p => <option key={p} value={p} />)}</datalist>
       </div>
+      <input type="text" list="expense-people" placeholder="Spent on someone? (optional)" value={person} onChange={e => setPerson(e.target.value)} maxLength={40}
+        className="w-full bg-muted rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
 
       <div className="flex gap-2">
         <input type="text" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)}
@@ -99,7 +110,7 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                 onClick={() => editingId === e.id ? setEditingId(null) : startEditing(e)}
               >
                 <span className="w-2 h-2 rounded-full bg-section-expense shrink-0" />
-                <span className="flex-1 truncate text-sm font-medium">{e.note || e.category}</span>
+                <span className="flex-1 truncate text-sm font-medium">{e.note || e.category}{e.person && <span className="text-muted-foreground font-normal"> · for {e.person}</span>}</span>
                 <span className="text-muted-foreground text-[10px] px-1.5 py-0.5 bg-muted/50 rounded-md border border-border/20">
                   {e.category}
                 </span>
@@ -136,14 +147,14 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                       </div>
                       <div className="flex-1 space-y-1">
                         <label className="text-[10px] text-muted-foreground font-medium px-1">Category</label>
-                        <select
+                        <input
+                          list="expense-categories"
                           value={editCategory}
+                          maxLength={30}
                           onChange={evt => setEditCategory(evt.target.value)}
                           className="w-full bg-background rounded-md px-2 py-1.5 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
                           onClick={evt => evt.stopPropagation()}
-                        >
-                          {categories.map(c => <option key={c}>{c}</option>)}
-                        </select>
+                        />
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -153,6 +164,19 @@ export function ExpenseTracker({ expenses, selectedDate, onAdd, onRemove, onUpda
                         value={editNote}
                         onChange={evt => setEditNote(evt.target.value)}
                         placeholder="Note"
+                        className="w-full bg-background rounded-md px-2 py-1.5 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
+                        onClick={evt => evt.stopPropagation()}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground font-medium px-1">Spent on</label>
+                      <input
+                        type="text"
+                        list="expense-people"
+                        value={editPerson}
+                        maxLength={40}
+                        onChange={evt => setEditPerson(evt.target.value)}
+                        placeholder="Friend or family (optional)"
                         className="w-full bg-background rounded-md px-2 py-1.5 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
                         onClick={evt => evt.stopPropagation()}
                       />
