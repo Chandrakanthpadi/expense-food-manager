@@ -617,7 +617,8 @@ function DayDetail({ date, data: lifeData, onBack, onUpdate, onRemove }: { date:
   );
 }
 
-const expenseCategories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+import { mergeCategories } from "../../supabase/functions/ai-insights/expense-parser";
+const staticCategories = mergeCategories([]);
 
 // Category expenses detail view
 function CategoryExpensesDetail({

@@ -24,7 +24,8 @@ const CATEGORIES: Record<string, { label: string; icon: React.ReactNode; colorCl
   journal: { label: "Journal", icon: <BookOpen className="w-4 h-4" />, colorClass: "bg-section-journal" },
 };
 
-const expenseCategories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+import { mergeCategories } from "../../supabase/functions/ai-insights/expense-parser";
+const staticCategories = mergeCategories([]);
 
 
 function fmtLocal(d: Date) { return getISTDateStr(d); }

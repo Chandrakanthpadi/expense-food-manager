@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
+import { DollarSign, HandCoins, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { useFeatureSettings } from "@/hooks/useFeatureSettings";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
