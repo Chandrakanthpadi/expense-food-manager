@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle,
-  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info, Trash2
+  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info, Trash2, HandCoins
 } from "lucide-react";
+import { loanBalances } from "@/components/LoansTracker";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useLifeData } from "@/hooks/useLifeData";
