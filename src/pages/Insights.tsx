@@ -487,7 +487,7 @@ function DayDetail({ date, data: lifeData, onBack, onUpdate, onRemove }: { date:
                             className="w-full bg-background rounded-md px-2 py-1.5 text-xs outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
                             onClick={evt => evt.stopPropagation()}
                           >
-                            {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                            {mergeCategories(lifeData.expenses.map((x: any) => x.category)).map(c => <option key={c}>{c}</option>)}
                           </select>
                         </div>
                       </div>
@@ -731,7 +731,7 @@ function CategoryExpensesDetail({
                         className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
                         onClick={evt => evt.stopPropagation()}
                       >
-                        {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                        {mergeCategories(lifeData.expenses.map((x: any) => x.category)).map(c => <option key={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
@@ -980,7 +980,7 @@ const Insights = () => {
     setAuditResults([]);
     try {
       const currentExpenses = data.expenses.filter(e => inRange(e.date, activeStart, activeEnd));
-      const results = await auditExpenses(currentExpenses, expenseCategories);
+      const results = await auditExpenses(currentExpenses, mergeCategories(data.expenses.map(x => x.category)));
       setAuditResults(results);
     } catch (err) {
       console.error("Audit failed:", err);
