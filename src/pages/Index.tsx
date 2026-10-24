@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
+import { DollarSign, HandCoins, UtensilsCrossed, Dumbbell, Target, ListTodo, BookOpen, Calendar, BarChart3, Settings } from "lucide-react";
 import { useLifeData } from "@/hooks/useLifeData";
 import { useFeatureSettings } from "@/hooks/useFeatureSettings";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 import { ExpenseTracker } from "@/components/ExpenseTracker";
+import { LoansTracker } from "@/components/LoansTracker";
 import { FoodLog } from "@/components/FoodLog";
 import { ExerciseLog } from "@/components/ExerciseLog";
 import { HabitTracker } from "@/components/HabitTracker";
@@ -88,9 +89,20 @@ const Index = () => {
                 expenses={life.data.expenses} 
                 selectedDate={selectedDate} 
                 onAdd={life.addExpense} 
+                onAddLoan={life.addLoan}
                 onRemove={life.removeExpense} 
                 onUpdate={life.updateExpense}
               />
+            </CollapsibleSection>
+          </div>
+        )}
+
+        {/* Lent money */}
+        {settings.expenses && (
+          <div className="section-reveal stagger-3">
+            <CollapsibleSection title="Lent money" icon={<HandCoins className="w-4 h-4" />} accentColor="bg-section-expense"
+              count={life.data.loans.filter(l => l.date === selectedDate).length}>
+              <LoansTracker loans={life.data.loans} selectedDate={selectedDate} onAdd={life.addLoan} onRemove={life.removeLoan} />
             </CollapsibleSection>
 
           </div>

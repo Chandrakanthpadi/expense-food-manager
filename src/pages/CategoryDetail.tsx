@@ -24,7 +24,7 @@ const CATEGORIES: Record<string, { label: string; icon: React.ReactNode; colorCl
   journal: { label: "Journal", icon: <BookOpen className="w-4 h-4" />, colorClass: "bg-section-journal" },
 };
 
-const expenseCategories = ["Food", "Groceries", "Transport", "Bills", "Shopping", "Health", "Other"];
+import { mergeCategories } from "../../supabase/functions/ai-insights/expense-parser";
 
 
 function fmtLocal(d: Date) { return getISTDateStr(d); }
@@ -460,7 +460,7 @@ const CategoryDetail = () => {
                                   className="w-full bg-background rounded-md px-2.5 py-2 text-sm outline-none border border-border/40 focus:ring-2 focus:ring-ring/30"
                                   onClick={evt => evt.stopPropagation()}
                                 >
-                                  {expenseCategories.map(c => <option key={c}>{c}</option>)}
+                                  {mergeCategories(data.expenses.map(x => x.category)).map(c => <option key={c}>{c}</option>)}
                                 </select>
                               </div>
                             </div>

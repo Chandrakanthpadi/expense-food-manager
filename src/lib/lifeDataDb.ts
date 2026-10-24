@@ -8,7 +8,7 @@ import {
 } from "@/lib/lifeDataTypes";
 
 const DB_NAME = "lifeflow-indexeddb";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const META_STORE = "meta";
 const MIGRATION_KEY = "migratedFromLocalStorage";
 
@@ -135,6 +135,7 @@ export async function loadLifeDataFromDb(): Promise<LifeData> {
     habits,
     tasks,
     journal,
+    loans,
   ] = await Promise.all([
     requestToPromise(transaction.objectStore("expenses").getAll()),
     requestToPromise(transaction.objectStore("food").getAll()),
@@ -143,6 +144,7 @@ export async function loadLifeDataFromDb(): Promise<LifeData> {
     requestToPromise(transaction.objectStore("habits").getAll()),
     requestToPromise(transaction.objectStore("tasks").getAll()),
     requestToPromise(transaction.objectStore("journal").getAll()),
+    requestToPromise(transaction.objectStore("loans").getAll()),
   ]);
 
   await transactionDone(transaction);
@@ -155,6 +157,7 @@ export async function loadLifeDataFromDb(): Promise<LifeData> {
     habits,
     tasks,
     journal,
+    loans,
   });
 }
 

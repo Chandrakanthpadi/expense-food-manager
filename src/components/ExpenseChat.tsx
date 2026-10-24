@@ -12,10 +12,12 @@ interface Message {
 
 interface Props {
   selectedDate: string;
-  onAdd: (amount: number, category: string, note: string, date?: string) => void;
+  categories: string[];
+  onAdd: (amount: number, category: string, note: string, date?: string, person?: string | null) => void;
+  onAddLoan: (person: string, amount: number, kind: "lent" | "repaid", note: string, date?: string) => void;
 }
 
-export function ExpenseChat({ selectedDate, onAdd }: Props) {
+export function ExpenseChat({ selectedDate, categories, onAdd, onAddLoan }: Props) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -46,12 +48,19 @@ export function ExpenseChat({ selectedDate, onAdd }: Props) {
     setDraft("");
     setMessages(previous => [...previous, { id: crypto.randomUUID(), role: "user", text }]);
     try {
-      const expense = await interpretExpenseMessage(text);
-      onAdd(expense.amount, expense.category, expense.note, selectedDate);
-      setMessages(previous => [...previous, {
-        id: crypto.randomUUID(), role: "assistant",
-        text: `Added ₹${expense.amount.toFixed(2)} · ${expense.category}\n${expense.note}`,
-      }]);
+      const entry = await interpretExpenseMessage(text, categories);
+      let reply: string;
+      if (entry.type === "loan") {
+        onAddLoan(entry.person, entry.amount, entry.kind, entry.note, selectedDate);
+        reply = entry.kind === "lent"
+          ? `Lent ₹${entry.amount.toFixed(2)} to ${entry.person}`
+          : `${entry.person} paid back ₹${entry.amount.toFixed(2)}`;
+        if (entry.note) reply += `\n${entry.note}`;
+      } else {
+        onAdd(entry.amount, entry.category, entry.note, selectedDate, entry.person ?? null);
+        reply = `Added ₹${entry.amount.toFixed(2)} · ${entry.category}${entry.person ? ` · for ${entry.person}` : ""}\n${entry.note}`;
+      }
+      setMessages(previous => [...previous, { id: crypto.randomUUID(), role: "assistant", text: reply }]);
     } catch (error) {
       setDraft(text);
       setMessages(previous => [...previous, {
@@ -84,7 +93,7 @@ export function ExpenseChat({ selectedDate, onAdd }: Props) {
       </div>
       {!online && <p role="status" className="border-t border-border px-3 py-2 text-sm text-muted-foreground">Expense chat needs internet. Manual entries still work offline.</p>}
       <form className="flex items-end gap-2 border-t border-border bg-background p-2" onSubmit={event => { event.preventDefault(); void send(); }}>
-        <input aria-label="Expense message" placeholder="500 for chai" maxLength={500} value={draft} disabled={sending}
+        <input aria-label="Expense message" placeholder="500 for chai · lent 1000 to Ravi" maxLength={500} value={draft} disabled={sending}
           onChange={event => setDraft(event.target.value)} className="h-10 min-w-0 flex-1 rounded-md bg-muted px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
         <Button type="submit" size="icon" title="Send expense" aria-label="Send expense" disabled={!draft.trim() || sending || !online}>
           {sending ? <Loader2 className="motion-safe:animate-spin" /> : <Send />}

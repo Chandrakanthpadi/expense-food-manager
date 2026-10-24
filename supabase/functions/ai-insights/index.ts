@@ -1,13 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3.25.76";
-import { expenseChatPrompt, parseExpenseResult } from "./expense-parser.ts";
+import { expenseChatPrompt, mergeCategories, parseChatResult } from "./expense-parser.ts";
 
 const BodySchema = z.object({
   mode: z.enum(["status", "analysis", "audit", "categorize", "expense-chat"]),
   prompt: z.string().trim().min(1).max(100000).optional(),
   message: z.string().trim().min(1).max(500).optional(),
   periodLabel: z.string().max(255).optional(),
+  categories: z.array(z.string().trim().min(1).max(30)).max(60).optional(),
 });
 
 const FREE_MODEL = "recursive/flint-v1.0:free";
@@ -33,7 +34,8 @@ Deno.serve(async (req) => {
     const parsed = BodySchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return json({ error: "Invalid request. Check the message and try again." }, 400);
     const { mode, periodLabel, message } = parsed.data;
-    const prompt = mode === "expense-chat" && message ? expenseChatPrompt(message) : parsed.data.prompt;
+    const categories = mergeCategories(parsed.data.categories ?? []);
+    const prompt = mode === "expense-chat" && message ? expenseChatPrompt(message, categories) : parsed.data.prompt;
     if (mode === "expense-chat" && !message) return json({ error: "Enter an expense message." }, 400);
 
     // Compute current month usage (used by all modes)
@@ -91,9 +93,9 @@ Deno.serve(async (req) => {
     let expense;
     if (mode === "expense-chat") {
       try {
-        expense = parseExpenseResult(content);
+        expense = parseChatResult(content, categories);
       } catch {
-        return json({ error: "Could not understand this expense. Send one amount and what you paid for." }, 422);
+        return json({ error: "Could not understand this. Send one amount and what it was for, e.g. \"200 for lunch\" or \"lent 500 to Ravi\"." }, 422);
       }
     }
 
