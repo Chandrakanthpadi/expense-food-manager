@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, DollarSign, UtensilsCrossed, Dumbbell, Target,
   ListTodo, BookOpen, TrendingUp, TrendingDown, Flame, Award, Download, Sparkles, AlertCircle,
-  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info, Trash2
+  ChevronDown, X, Calendar as CalendarIcon, Loader2, Check, RotateCcw, Info, Trash2, HandCoins
 } from "lucide-react";
+import { loanBalances } from "@/components/LoansTracker";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useLifeData } from "@/hooks/useLifeData";
@@ -1526,6 +1527,45 @@ const Insights = () => {
 
                 </Section>
               )}
+
+              {/* ── Lent money ── */}
+              {settings.expenses && (() => {
+                const rangeLoans = data.loans.filter(l => inRange(l.date, activeStart, activeEnd));
+                const balances = loanBalances(rangeLoans);
+                if (balances.length === 0) return null;
+                const totalDue = balances.reduce((s, b) => s + Math.max(0, b.due), 0);
+                const totalOwed = balances.reduce((s, b) => s + Math.max(0, -b.due), 0);
+                return (
+                  <Section title="Lent money" icon={<HandCoins className="w-4 h-4" />} colorClass="bg-section-expense">
+                    <MetricRow label="To get back" value={`₹${totalDue.toFixed(2)}`} />
+                    {totalOwed > 0 && <MetricRow label="I owe" value={`₹${totalOwed.toFixed(2)}`} />}
+                    <div className="mt-3 space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium mb-1 px-1">By person</p>
+                      {balances.map(b => (
+                        <div
+                          key={b.person}
+                          onClick={() => navigate(`/insights/loans/${encodeURIComponent(b.person)}`)}
+                          className="flex items-center justify-between px-2 py-2.5 rounded-lg hover:bg-muted/50 active:bg-muted/80 cursor-pointer transition-colors group"
+                        >
+                          <span className="text-xs font-medium text-foreground flex items-center gap-2">
+                            {b.person}
+                            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </span>
+                          <div className="text-right">
+                            <p className={cn("text-xs font-semibold tabular-nums", b.due <= 0 && "text-muted-foreground")}>
+                              {b.due > 0 ? `₹${b.due.toFixed(0)}` : b.due < 0 ? `owe ₹${(-b.due).toFixed(0)}` : "Settled"}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              lent ₹{b.lent.toFixed(0)} · back ₹{b.repaid.toFixed(0)}
+                              {b.borrowed > 0 && ` · took ₹${b.borrowed.toFixed(0)}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                );
+              })()}
 
               {/* ── Food ── */}
               {settings.food && (
