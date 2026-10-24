@@ -11,7 +11,7 @@ const BodySchema = z.object({
 });
 
 const MONTHLY_LIMIT = 10;
-const FREE_MODEL = "openai/gpt-oss-20b:free";
+const FREE_MODEL = "google/gemma-4-26b-a4b-it:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 Deno.serve(async (req) => {
