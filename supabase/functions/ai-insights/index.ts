@@ -87,6 +87,9 @@ Deno.serve(async (req) => {
     if (!aiResp.ok) {
       const errBody = await aiResp.text();
       console.error("OpenRouter error:", aiResp.status, errBody);
+      if (aiResp.status === 404) {
+        return json({ error: "The configured free AI model is no longer available. Expense chat cannot record entries until an available free model is selected. Manual entry still works." }, 404);
+      }
       return json({ error: "AI request failed" }, 502);
     }
 
