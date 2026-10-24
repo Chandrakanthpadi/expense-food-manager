@@ -30,7 +30,6 @@ interface InsightRow {
   created_at: string;
 }
 
-const MONTHLY_LIMIT = 10;
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -60,7 +59,6 @@ const Settings = () => {
     })();
   }, [user]);
 
-  const remaining = aiUsed === null ? null : Math.max(0, MONTHLY_LIMIT - aiUsed);
 
   return (
     <div className="min-h-screen bg-background">
