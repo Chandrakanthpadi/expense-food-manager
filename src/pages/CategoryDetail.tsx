@@ -25,7 +25,6 @@ const CATEGORIES: Record<string, { label: string; icon: React.ReactNode; colorCl
 };
 
 import { mergeCategories } from "../../supabase/functions/ai-insights/expense-parser";
-const staticCategories = mergeCategories([]);
 
 
 function fmtLocal(d: Date) { return getISTDateStr(d); }
