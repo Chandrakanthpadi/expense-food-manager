@@ -45,4 +45,27 @@ describe("loan balances", () => {
     expect(b.find(x => x.person === "Ravi")?.due).toBe(700);
     expect(b.find(x => x.person === "Anu")?.due).toBe(200);
   });
+  it("borrowing reduces the net to get back; returning restores it", () => {
+    const b = loanBalances([
+      { id: "1", person: "Vamsi", amount: 500, kind: "lent", note: "", date: "2026-10-01" },
+      { id: "2", person: "Vamsi", amount: 200, kind: "borrowed", note: "", date: "2026-10-02" },
+    ]);
+    expect(b.find(x => x.person === "Vamsi")?.due).toBe(300);
+    const settled = loanBalances([
+      { id: "1", person: "Vamsi", amount: 500, kind: "borrowed", note: "", date: "2026-10-01" },
+      { id: "2", person: "Vamsi", amount: 500, kind: "returned", note: "", date: "2026-10-02" },
+    ]);
+    expect(settled.find(x => x.person === "Vamsi")?.due).toBe(0);
+    const iOwe = loanBalances([
+      { id: "1", person: "Vamsi", amount: 200, kind: "borrowed", note: "", date: "2026-10-01" },
+    ]);
+    expect(iOwe.find(x => x.person === "Vamsi")?.due).toBe(-200);
+  });
+  it("parses borrowing and returning from chat", () => {
+    expect(parseChatResult('{"type":"loan","amount":200,"kind":"borrowed","person":"vamsi","note":""}'))
+      .toEqual({ type: "loan", amount: 200, kind: "borrowed", person: "Vamsi", note: "" });
+    expect(parseChatResult('{"type":"loan","amount":200,"kind":"returned","person":"Vamsi","note":""}'))
+      .toEqual({ type: "loan", amount: 200, kind: "returned", person: "Vamsi", note: "" });
+    expect(() => parseChatResult('{"type":"loan","amount":500,"kind":"gift","person":"Ravi"}')).toThrow();
+  });
 });

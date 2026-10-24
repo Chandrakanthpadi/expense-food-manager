@@ -3,7 +3,7 @@ export const defaultExpenseCategories = ["Food", "Groceries", "Transport", "Bill
 /** @deprecated categories are dynamic; kept as the starter list. */
 export const expenseCategories = defaultExpenseCategories;
 
-export type LoanKind = "lent" | "repaid";
+export type LoanKind = "lent" | "repaid" | "borrowed" | "returned";
 
 export type ParsedChatEntry =
   | { type: "expense"; amount: number; category: string; note: string; person?: string }
@@ -48,7 +48,7 @@ export function parseChatResult(content: string, known: string[] = []): ParsedCh
 
   if (value.type === "loan") {
     const person = normalizePerson(value.person);
-    if (!person || (value.kind !== "lent" && value.kind !== "repaid")) throw new Error(INVALID);
+    if (!person || !["lent", "repaid", "borrowed", "returned"].includes(value.kind)) throw new Error(INVALID);
     return { type: "loan", amount: value.amount, kind: value.kind, person, note };
   }
 
@@ -70,9 +70,11 @@ export function expenseChatPrompt(message: string, categories: string[] = defaul
 Return ONLY one JSON object, in one of these shapes:
 1. Spending: {"type":"expense","amount":number,"category":string,"note":string,"person":string|null}
    - "person" is the friend/family member the money was spent ON (e.g. "dinner for Ravi", "gift for mom"), otherwise null.
-2. Money lent or paid back: {"type":"loan","amount":number,"kind":"lent"|"repaid","person":string,"note":string}
+2. Money lent, borrowed or settled: {"type":"loan","amount":number,"kind":"lent"|"repaid"|"borrowed"|"returned","person":string,"note":string}
    - "lent" when the user gave/lent money to someone that should come back ("lent 500 to Ravi", "gave Ravi 500 loan").
    - "repaid" when someone returned money to the user ("Ravi paid back 200", "got 300 from Anu").
+   - "borrowed" when the user took money from someone and owes them ("borrowed 200 from Vamsi", "took 500 from Anu").
+   - "returned" when the user paid back money they had borrowed ("returned 200 to Vamsi", "paid Vamsi back 200").
 Existing categories: ${categories.join(", ")}.
 Prefer an existing category. Only if none fits, create a new short category name (1-2 words, Title Case, e.g. "Entertainment", "Education", "Gifts").
 The user is in India and may use Indian food words, often misspelled. "Chat", "chaat", "pani puri", "golgappa", "bhel", "samosa", "vada pav", "dosa", "idli", "biryani", chai, tea, coffee, restaurant meals and prepared snacks are Food. Supermarket ingredients, vegetables, milk and rice are Groceries.

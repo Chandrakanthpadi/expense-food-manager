@@ -12,8 +12,8 @@ export interface Loan {
   id: string;
   person: string;
   amount: number;
-  /** "lent" = I gave money; "repaid" = they paid me back. */
-  kind: "lent" | "repaid";
+  /** "lent" = I gave money; "repaid" = they paid me back; "borrowed" = I took money; "returned" = I paid it back. */
+  kind: "lent" | "repaid" | "borrowed" | "returned";
   note: string;
   date: string;
 }

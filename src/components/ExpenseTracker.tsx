@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, X, ChevronDown } from "lucide-react";
-import type { Expense } from "@/hooks/useLifeData";
+import type { Expense, Loan } from "@/hooks/useLifeData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ExpenseChat } from "@/components/ExpenseChat";
@@ -10,7 +10,7 @@ interface Props {
   expenses: Expense[];
   selectedDate: string;
   onAdd: (amount: number, category: string, note: string, date?: string, person?: string | null) => void;
-  onAddLoan: (person: string, amount: number, kind: "lent" | "repaid", note: string, date?: string) => void;
+  onAddLoan: (person: string, amount: number, kind: Loan["kind"], note: string, date?: string) => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Expense>) => void;
 }
